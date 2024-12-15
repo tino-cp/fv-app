@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-import pytz
+from pytz import timezone
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 logger = logging.getLogger('discord')
@@ -17,6 +18,7 @@ EMBED_TYPES = [
     'future_weather_date',
 ]
 
+WEATHER_PERIOD = 384
 GAME_HOUR_LENGTH = 120
 SUNRISE_TIME = 5
 SUNSET_TIME = 21
@@ -25,7 +27,7 @@ WEEKDAYS = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]
 
-epoch: datetime = datetime(1970, 1, 1)  # used to get total_seconds
+epoch: datetime = datetime(1970, 1, 1, tzinfo=timezone('UTC'))  # used to get total_seconds
 
 TIME_ZONES = {
     "North America": {
@@ -52,6 +54,7 @@ TIME_ZONES = {
     },
 }
 
+
 def hours_to_HHMM(hours: float) -> str:
     """
     Convert a floating-point hour value to HH:MM format.
@@ -60,6 +63,7 @@ def hours_to_HHMM(hours: float) -> str:
     h = int(hours)
     m = int((hours - h) * 60)
     return f"{h:02}:{m:02}"
+
 
 class Weather:
     def __init__(self, name: str, emoji: str, day_thumbnail: str, night_thumbnail: str):
@@ -104,6 +108,17 @@ class RainETA:
         else:
             return minutes_str
 
+    def get_rain_eta_irl_time(self, current_time: datetime, timezone_str: str) -> str:
+        """
+        Calculate the IRL time when the rain will arrive, in the specified timezone.
+        """
+        if self.sec_eta == 0:
+            return 'No rain'
+
+        eta_time = current_time + timedelta(seconds=self.sec_eta)
+        tz = timezone(timezone_str)
+        eta_time_tz = eta_time.astimezone(tz)
+        return eta_time_tz.strftime("%Y-%m-%d %H:%M:%S")
 
 class WeatherState:
     def __init__(self, weather: Weather, gta_time: GTATime, rain_eta: RainETA):
@@ -208,13 +223,14 @@ WEATHER_STATE_CHANGES = [
     [377, WEATHER_STATES['partly_cloudy']]
 ]
 
+
 # Function to get GTA time
 def get_gta_time(date: datetime) -> GTATime:
     timestamp: int = int((date - epoch).total_seconds())
     total_gta_hours: float = timestamp / GAME_HOUR_LENGTH
     weekday = WEEKDAYS[int(total_gta_hours % 168 / 24) - 1]
     current_gta_hour: float = total_gta_hours % 24
-    return GTATime(current_gta_hour, weekday, total_gta_hours % 384)
+    return GTATime(current_gta_hour, weekday, total_gta_hours % WEATHER_PERIOD)
 
 
 # Function to get weather for a given time period
@@ -227,23 +243,34 @@ def get_weather_for_period_time(weather_period_time: float) -> Weather:
 
 # Function to check if it's raining
 def check_is_raining(weather: Weather):
-    return weather is WEATHER_STATES['raining']
+    return weather == WEATHER_STATES['raining'] or weather == WEATHER_STATES['drizzling']
 
 
 # Function to get rain ETA
 def get_rain_eta(weather_period_time: float, weather: Weather) -> RainETA:
     is_raining = check_is_raining(weather)
-    len_weather_state_changes = len(WEATHER_STATE_CHANGES)
 
+    len_weather_state_changes = len(WEATHER_STATE_CHANGES)
     for i in range(len_weather_state_changes * 2):
         index = i % len_weather_state_changes
-        offset = int(i / len_weather_state_changes) * 384
+        offset = int(i / len_weather_state_changes) * WEATHER_PERIOD
 
         if WEATHER_STATE_CHANGES[index][0] + offset >= weather_period_time:
             if is_raining ^ check_is_raining(WEATHER_STATE_CHANGES[index][1]):
-                rain_eta = WEATHER_STATE_CHANGES[index][0] + offset - weather_period_time
-                return RainETA(rain_eta, check_is_raining(WEATHER_STATE_CHANGES[index][1]))
+                return RainETA(
+                    sec_eta=((WEATHER_STATE_CHANGES[index][0] + offset) - weather_period_time) * GAME_HOUR_LENGTH,
+                    is_raining=is_raining
+                )
+
     return RainETA(0, is_raining)
+
+
+def get_gta_time_from_input(input_datetime: datetime) -> GTATime:
+    timestamp: int = int((input_datetime - epoch).total_seconds())
+    total_gta_hours: float = timestamp / GAME_HOUR_LENGTH
+    weekday = WEEKDAYS[int(total_gta_hours % 168 / 24) - 1]
+    current_gta_hour: float = total_gta_hours % 24
+    return GTATime(current_gta_hour, weekday, total_gta_hours % WEATHER_PERIOD)
 
 # Create the bot client with commands extension
 intents = discord.Intents.default()
@@ -251,40 +278,108 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+
 @bot.command()
-async def weather(ctx):
-    # Example function to get weather information for a given command
-    gta_time = get_gta_time(datetime.now())
+async def weathertime(ctx, date_time: str = None):
+    if not date_time:
+        # If no date_time is provided, send an error message
+        await ctx.send("Please provide a date and time in the format 'YYYY-MM-DD HH:MM'.")
+        return
+
+    amsterdam_tz = timezone('Europe/Amsterdam')
+
+    try:
+        # Ensure the date_time is in the correct format
+        if len(date_time) == 10:  # Date only, add default time
+            date_time += ' 00:00'
+
+        # Parse and localize the datetime input
+        input_datetime = datetime.strptime(date_time, "%Y-%m-%d %H:%M")
+        input_datetime = amsterdam_tz.localize(input_datetime)  # Localize to Eastern timezone
+
+        # Ensure this datetime is passed to the GTA function
+        gta_time = get_gta_time_from_input(input_datetime)  # This should use the input time directly
+    except ValueError as e:
+        await ctx.send("Invalid date/time format. Please use 'YYYY-MM-DD HH:MM'.")
+        return
+
+    # Get weather and rain ETA for the period
     weather_period_time = gta_time.weather_period_time
     weather = get_weather_for_period_time(weather_period_time)
     rain_eta = get_rain_eta(weather_period_time, weather)
 
-    # Prepare the detailed weather info
-    detailed_info = (
-        f"**GTA Time**: {gta_time.str_game_time} ({gta_time.weekday})\n"
-        f"**Weather**: {weather.name} {weather.emoji}\n"
-        f"**Weather Thumbnail (Day)**: {weather.day_thumbnail}\n"
-        f"**Weather Thumbnail (Night)**: {weather.night_thumbnail}\n"
-        f"**Is it Day Time?**: {'Yes' if gta_time.is_day_time else 'No'}\n"
-        f"**Rain ETA**: {rain_eta.str_eta}\n"
-        f"**Is it Raining?**: {'Yes' if rain_eta.is_raining else 'No'}\n"
-    )
+    # Ensure rain_eta is a RainETA instance
+    if isinstance(rain_eta, RainETA):
+        # Use the `input_datetime` directly if `gta_time` doesn't have the `datetime` attribute
+        irl_rain_time = rain_eta.get_rain_eta_irl_time(input_datetime, 'Europe/Amsterdam')
 
-    # Log detailed information to console for debugging
-    logger.debug(detailed_info)
+        # Format the requested time and rain ETA to show only the time
+        requested_time = gta_time.str_game_time  # GTA time string
+        rain_eta_time = ':'.join(irl_rain_time.split(' ')[-1].split(':')[:2])  # Extract only the time part (HH:MM)
 
-    # Send the detailed info to the Discord channel
-    await ctx.send(detailed_info)
+        # Get current datetime for the report header
+        current_time = input_datetime.strftime('%d-%m-%Y %H:%M')  # Time in HH:MM format
+        day_of_week = input_datetime.strftime('%A')  # Get the day of the week
+
+        embed = discord.Embed(
+            title=f"Weather Report for {current_time} ({day_of_week})",
+            description=f"**GTA Time**: {requested_time}",
+            color=discord.Color.blue()
+        )
+
+        embed.add_field(name="Weather", value=f"{weather.name} {weather.emoji}")
+        embed.add_field(name="Rain ETA", value=f"{rain_eta.str_eta} ({rain_eta_time})")
+        embed.set_thumbnail(url=weather.day_thumbnail if gta_time.is_day_time else weather.night_thumbnail)
+
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send("Rain ETA data is unavailable.")
+
 
 @bot.command()
-async def forecast(ctx):
-    # Example function for future forecast
-    await ctx.send("Here is the forecast...")
+async def weather(ctx):
+    est = timezone('US/Eastern')
+    gta_time = get_gta_time(datetime.now(est))
+    weather_period_time = gta_time.weather_period_time
+    weather = get_weather_for_period_time(weather_period_time)
+    rain_eta = get_rain_eta(weather_period_time, weather)
+
+    # Ensure rain_eta is a RainETA instance
+    if isinstance(rain_eta, RainETA):
+        # Get the IRL time for rain ETA
+        irl_rain_time = rain_eta.get_rain_eta_irl_time(datetime.now(), 'Europe/Amsterdam')
+
+        # Format the requested time and rain ETA to show only the time
+        requested_time = gta_time.str_game_time
+        rain_eta_time = ':'.join(irl_rain_time.split(' ')[-1].split(':')[:2])  # Extract only the time part (HH:MM)
+
+        # Get current datetime for the report header
+        current_time = datetime.now().strftime('%d-%m-%Y %H:%M')  # Time in HH:MM format
+        day_of_week = datetime.now().strftime('%A')  # Get the day of the week
+
+        embed = discord.Embed(
+            title=f"Weather Report for {current_time} ({day_of_week})",
+            description=f"**GTA Time**: {requested_time}",
+            color=discord.Color.blue()
+        )
+
+        embed.add_field(name="Weather", value=f"{weather.name} {weather.emoji}")
+        embed.add_field(name="Rain ETA", value=f"{rain_eta.str_eta} ({rain_eta_time})")
+        # embed.add_field(name="Rain ETA (IRL)", value=rain_eta_time)  # Only show the time, no date
+        # embed.add_field(name="Is it Raining?", value="Yes" if rain_eta.is_raining else "No")
+        embed.set_thumbnail(url=weather.day_thumbnail if gta_time.is_day_time else weather.night_thumbnail)
+
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send("Rain ETA data is unavailable.")
+
+
 
 # Event when bot is ready
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
+
 
 # Start the bot with your token
 token = os.getenv("DISCORD_TOKEN")
