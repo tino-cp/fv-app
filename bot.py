@@ -1,61 +1,46 @@
+import os
+import logging
+from datetime import datetime, timedelta, timezone as dt_timezone
+from pytz import timezone as pytz_timezone
 import discord
 from discord.ext import commands
-from datetime import datetime, timedelta, timezone as dt_timezone
-import logging
+from discord import Intents
+from discord import Embed, Message, Intents, User
 from pytz import timezone as pytz_timezone
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('weather_bot')
+logger.setLevel(logging.INFO)
 
-logger = logging.getLogger('discord')
+ALIASES = ['current_weather', 'future_forecast']
 
-ALIASES = ['weather', 'forecast']
-
-EMBED_TYPES = [
-    'current_weather_state',
-    'future_weather_time_zone',
-    'future_weather_date',
+EMBED_TYPES = [  # Supported embed types for reactions
+    'current_weather', 'future_timezone_selection', 'future_weather_date'
 ]
 
-WEATHER_PERIOD = 384
-GAME_HOUR_LENGTH = 120
-SUNRISE_TIME = 5
-SUNSET_TIME = 21
+WEATHER_PERIOD = 384  # Number of in-game hours per weather cycle
+GAME_HOUR_LENGTH = 120  # IRL seconds per in-game hour
+SUNRISE_TIME = 5  # In-game sunrise hour
+SUNSET_TIME = 21  # In-game sunset hour
 
-WEEKDAYS = [
+WEEKDAYS = [  # Weekday names
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]
 
 epoch: datetime = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)  # used to get total_seconds
 
-TIME_ZONES = {
-    "North America": {
-        "Los Angeles": "US/Pacific",
-        "Denver": "US/Mountain",
-        "Chicago": "US/Central",
-        "New York": "US/Eastern",
-    },
-    "South America": {
-        "Buenos Aires": "America/Argentina/Buenos_Aires",
-    },
-    "Europe": {
-        "UTC": "UTC",
-        "London": "Europe/London",
-        "Amsterdam": "Europe/Amsterdam",
-    },
-    "Asia": {
-        "Vientiane": "Asia/Vientiane",
-        "Japan": "Japan",
-    },
-    "Australia": {
-        "Queensland": "Australia/Queensland",
-        "Sydney": "Australia/Sydney",
-    },
+TIME_ZONES = {  # Mapping of key time zones by region and city
+    "North America": {"Los Angeles": "US/Pacific", "Denver": "US/Mountain", "Chicago": "US/Central", "New York": "US/Eastern"},
+    "South America": {"Buenos Aires": "America/Argentina/Buenos_Aires"},
+    "Europe": {"UTC": "UTC", "London": "Europe/London", "Amsterdam": "Europe/Amsterdam"},
+    "Asia": {"Vientiane": "Asia/Vientiane", "Japan": "Japan"},
+    "Australia": {"Queensland": "Australia/Queensland", "Sydney": "Australia/Sydney"}
 }
 
 ORANGE = int(0xF03C00)
-ZERO_WIDTH = chr(8203)  # or the thing in between the dashes -​-
+ZERO_WIDTH = chr(8203)  # Zero-width character for spacing
 SPACE_CHAR = "⠀"
 HEAVY_CHECKMARK = "✔"
 BALLOT_CHECKMARK = "☑️"
@@ -64,7 +49,7 @@ FLAG_ON_POST = "🚩"
 COUNTER_CLOCKWISE = "🔄"
 CALENDAR = "📆"
 RAIN_WITH_SUN = "🌦️"
-X = "❌"
+
 MOON = "🌙"
 BOOKS = "📚"
 THUMBSUP = "👍"
@@ -72,19 +57,17 @@ THUMBSDOWN = "👎"
 SHRUG = "🤷"
 ORANGE_HEART = "🧡"
 NUMBERS_EMOJIS = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-LETTERS_EMOJIS = {
+LETTERS_EMOJIS = {  # Emoji mapping for letters (A-Z) and additional special characters
     "a": "🇦", "b": "🇧", "c": "🇨", "d": "🇩", "e": "🇪", "f": "🇫", "g": "🇬", "h": "🇭", "i": "🇮",
     "j": "🇯", "k": "🇰", "l": "🇱", "m": "🇲", "n": "🇳", "o": "🇴", "p": "🇵", "q": "🇶", "r": "🇷",
     "s": "🇸", "t": "🇹", "u": "🇺", "v": "🇻", "w": "🇼", "x": "🇽", "y": "🇾", "z": "🇿", "?": "❔"
 }
 
+bot_state = {}
+
 def hours_to_HHMM(hours: float) -> str:
-    """
-    Convert a floating-point hour value to HH:MM format.
-    Example: 14.5 will be converted to '14:30'.
-    """
-    h = int(hours)
-    m = int((hours - h) * 60)
+    """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
+    h, m = divmod(round(hours * 60), 60)
     return f"{h:02}:{m:02}"
 
 
@@ -96,6 +79,7 @@ class Weather:
         self.night_thumbnail = night_thumbnail
 
 
+# Represents GTA game time and its related attributes
 class GTATime:
     def __init__(self, hours_game_time: float, weekday, weather_period_time: float):
         self.hours_game_time = hours_game_time
@@ -105,6 +89,7 @@ class GTATime:
         self.is_day_time = SUNRISE_TIME <= self.hours_game_time < SUNSET_TIME
 
 
+# Represents rain estimation details (ETA)
 class RainETA:
     def __init__(self, sec_eta: int, is_raining: bool):
         self.sec_eta = sec_eta
@@ -128,8 +113,7 @@ class RainETA:
         elif hours_str and not minutes_str:
             return hours_str
 
-        else:
-            return minutes_str
+        return minutes_str
 
     def get_rain_eta_irl_time(self, current_time: datetime, timezone_str: str) -> str:
         """
@@ -144,11 +128,11 @@ class RainETA:
         return eta_time_tz.strftime("%Y-%m-%d %H:%M:%S")
 
 class WeatherState:
+    """Represents the full current weather conditions"""
     def __init__(self, weather: Weather, gta_time: GTATime, rain_eta: RainETA):
         self.weather = weather
         self.gta_time = gta_time
         self.rain_eta = rain_eta
-
 
 # Weather states with all conditions
 WEATHER_STATES = {
@@ -225,7 +209,6 @@ WEATHER_STATE_CHANGES = [
     [220, WEATHER_STATES['misty']],
     [222, WEATHER_STATES['mostly_clear']],
     [244, WEATHER_STATES['misty']],
-    [246, WEATHER_STATES['mostly_clear']],
     [247, WEATHER_STATES['raining']],
     [250, WEATHER_STATES['drizzling']],
     [252, WEATHER_STATES['partly_cloudy']],
@@ -275,7 +258,8 @@ async def handle_reaction_add(
         if emoji in embed_meta:
 
             try:
-                await msg.clear_reactions()
+                if msg.reactions:
+                    await msg.clear_reactions()
             except discord.Forbidden:
                 pass
 
@@ -311,8 +295,11 @@ def get_gta_time(date: datetime) -> GTATime:
     total_gta_hours: float = timestamp / GAME_HOUR_LENGTH
     weekday = WEEKDAYS[int(total_gta_hours % 168 / 24) - 1]
     current_gta_hour: float = total_gta_hours % 24
-    return GTATime(current_gta_hour, weekday, total_gta_hours % WEATHER_PERIOD)
-
+    return GTATime(
+        hours_game_time=current_gta_hour,
+        weekday=weekday,
+        weather_period_time=total_gta_hours % WEATHER_PERIOD
+    )
 
 # Function to get weather for a given time period
 def get_weather_for_period_time(weather_period_time: float) -> Weather:
@@ -327,7 +314,7 @@ def check_is_raining(weather: Weather):
     return weather == WEATHER_STATES['raining'] or weather == WEATHER_STATES['drizzling']
 
 
-# Function to get rain ETA
+# Function to calculate rain ETA
 def get_rain_eta(weather_period_time: float, weather: Weather) -> RainETA:
     is_raining = check_is_raining(weather)
 
@@ -430,6 +417,20 @@ async def get_user_timezone(msg: discord.Message):
     [await msg.add_reaction(r) for r in reactions]
 
 
+async def prompt_user_timezone(ctx):
+    """
+    Prompts the user to select a timezone for forecast handling.
+    """
+    msg = await ctx.send("Please select a timezone.")
+    await get_user_timezone(msg)
+
+async def prompt_user_timezone_for_forecast(message, user):
+    """
+    Prompts the user for their timezone before proceeding with a forecast.
+    """
+    msg = await message.channel.send(f"{user.mention}, please select your timezone.")
+    await get_user_timezone(msg)
+
 async def get_user_date(msg: discord.Message, time_zone_str: str):
     embed = discord.Embed(
         color=discord.Color(ORANGE),
@@ -494,20 +495,7 @@ async def send_future_weather(msg: discord.Message, user: discord.User, embed_me
 
 
 async def send_forecast(msg: discord.Message, forecast: list[list[datetime, WeatherState]], date):
-    forecast_str = ""
-    for d, weather_state in forecast:
-        d = pytz_timezone("UTC").localize(d).astimezone(date.tzinfo)
-        forecast_str += f"{datetime.strftime(d, '%H:%M')} - " \
-                        f"{weather_state.weather.emoji} {weather_state.weather.name} " \
-                        f"{ZERO_WIDTH if weather_state.gta_time.is_day_time else MOON}\n"
-
-    embed = msg.embeds[0]
-    embed.title = f"**Forecast: \n" \
-                  f"{smart_day_time_format('{S} %b %Y @ %H:%M %Z', date)}**"
-    embed.description = f"```{forecast_str}```"
-
-    await msg.edit(embed=embed)
-
+    await show_forecast(msg, forecast, date)
     logger.info(f"Sent Forecast: {date}")
 
 
@@ -543,12 +531,52 @@ async def send_weather(message: discord.Message) -> discord.Message:
 
     return msg
 
+async def send_race_weather(ctx, weekday: str, start_hour: int = 18) -> None:
+    """
+    Sends a weather forecast for a specified weekday and start time.
+    :param ctx: The context of the command.
+    :param weekday: The weekday (e.g., 'Saturday', 'Sunday') for the race.
+    :param start_hour: The start hour (default is 18 representing 6 PM).
+    """
+    current_time = datetime.now(dt_timezone.utc)
+    today = current_time.weekday()
+
+    # Find the next occurrence of the specified weekday
+    target_weekday_index = WEEKDAYS.index(weekday)
+    days_ahead = (target_weekday_index - today + 7) % 7 or 7
+    race_day = current_time + timedelta(days=days_ahead)
+    race_start_time = race_day.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+
+    try:
+        # Get the weather for the exact time
+        race_weather_state = get_weather_state(race_start_time)
+        gta_time = get_gta_time(race_start_time)
+
+        # Prepare and send an embed with weather details
+        embed = discord.Embed(
+            title=f"Race Weather for {weekday} at {start_hour}:00 (UTC)",
+            color=discord.Color(ORANGE)
+        )
+        embed.add_field(name="Race Date", value=race_start_time.strftime('%Y-%m-%d'))
+        embed.add_field(name="Time", value=gta_time.str_game_time)
+        embed.add_field(name="Day", value=gta_time.weekday)
+        embed.add_field(name="Weather", value=f"{race_weather_state.weather.name} {race_weather_state.weather.emoji}")
+        embed.add_field(name="Rain ETA", value=race_weather_state.rain_eta.str_eta)
+        embed.set_thumbnail(
+            url=race_weather_state.weather.day_thumbnail if gta_time.is_day_time else race_weather_state.weather.night_thumbnail
+        )
+
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        await ctx.send(f"An error occurred while fetching the race weather: {str(e)}")
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.messages = True
 intents.reactions = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 
 @bot.event
@@ -556,6 +584,30 @@ async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
 @bot.command()
+async def race(ctx, series: str = "f1"):
+    """
+    Fetches the race weather for F1 or F2 schedules.
+    F1: Every Sunday at 6 PM UTC
+    F2: Every Saturday at 6 PM UTC
+    Example usage:
+      !race f1
+      !race f2
+    If no series is provided, it defaults to F1.
+    """
+    if series.lower() == "f1":
+        await send_race_weather(ctx, "Sunday", 18)
+    elif series.lower() == "f2":
+        await send_race_weather(ctx, "Saturday", 18)
+    else:
+        await ctx.send("Invalid series! Use `!race f1` for F1 or `!race f2` for F2.")
+
+@race.error
+async def race_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("You forgot to specify the series! Use `!race f1` or `!race f2`.")
+
+
+@bot.command(name='weather', help='Fetch the current weather state.')
 async def weather(ctx):
     """
     Fetches the current weather state and sends it to the Discord channel.
@@ -563,31 +615,44 @@ async def weather(ctx):
     current_time = datetime.now(dt_timezone.utc)
     gta_time = get_gta_time(current_time)
     weather_state = get_weather_state(current_time)
-    future_weather_state = get_weather_state(current_time + timedelta(seconds=weather_state.rain_eta.sec_eta, minutes=1))
+    future_weather_state = get_weather_state(
+        current_time + timedelta(
+            seconds=weather_state.rain_eta.sec_eta,
+            minutes=1
+        )
+    )
 
+    # Create your embed (same as before)
     embed = discord.Embed(
         title="Current Weather State",
-        color=discord.Color(ORANGE)
+        color=discord.Color.orange()
     )
     embed.add_field(name="Time", value=gta_time.str_game_time)
     embed.add_field(name="Day", value=gta_time.weekday)
     embed.add_field(name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
     embed.add_field(name="Rain ETA", value=weather_state.rain_eta.str_eta)
-    embed.add_field(name="Rain Length", value=f"\nIt's going to be {'dry' if weather_state.rain_eta.is_raining else 'wet'} " \
-               f"for {future_weather_state.rain_eta.str_eta}.")
+    embed.add_field(
+        name="Rain Length",
+        value=f"\nIt's going to be {'dry' if weather_state.rain_eta.is_raining else 'wet'} "
+              f"for {future_weather_state.rain_eta.str_eta}."
+    )
     embed.set_thumbnail(
-        url=weather_state.weather.day_thumbnail if gta_time.is_day_time else weather_state.weather.night_thumbnail)
-
+        url=weather_state.weather.day_thumbnail if gta_time.is_day_time else weather_state.weather.night_thumbnail
+    )
     embed.set_footer(text="React with 🔄 to refresh or 📆 to check the forecast.")
 
-    embed_meta = "embed_meta/type=current_weather_state/"
-    if embed.description is None:
-        embed.description = ""
-    embed.description += f"||[{ZERO_WIDTH}]({embed_meta})||"
+    # Send the embed and track the message ID in bot_state
+    sent_message = await ctx.send(embed=embed)
 
-    message = await ctx.send(embed=embed)
-    await message.add_reaction(COUNTER_CLOCKWISE)
-    await message.add_reaction(CALENDAR)
+    # Store interaction context in bot_state
+    bot_state[sent_message.id] = {
+        "type": "current_weather_state",  # Type of interaction/command
+        "time": current_time,  # Any details your bot needs (for example, weather time)
+        "channel_id": ctx.channel.id  # Optionally track the channel
+    }
+
+    await sent_message.add_reaction(COUNTER_CLOCKWISE)
+    await sent_message.add_reaction(CALENDAR)
 
 
 @bot.command()
@@ -617,7 +682,7 @@ async def getTimezone(ctx):
     """
     Allows the user to select a timezone for future weather forecasts.
     """
-    await get_user_timezone(await ctx.send("Please select a timezone."))
+    await prompt_user_timezone(ctx)
 
 
 @bot.command()
@@ -657,20 +722,77 @@ async def future_weather(ctx, *, input_date: str = "now"):
 
 @bot.event
 async def on_reaction_add(reaction, user):
+    """
+    Handles reactions on messages to refresh the weather or show the forecast.
+    """
+    # Ignore bot reactions
     if user.bot:
         return
 
-    msg = reaction.message
-    emoji = str(reaction.emoji)
+    # Check if the message ID is in bot_state
+    message_id = reaction.message.id
+    if message_id not in bot_state:
+        return  # No metadata available, do nothing
 
-    if not msg.embeds:
-        return
+    # Get the metadata for the message
+    metadata = bot_state[message_id]
+    interaction_type = metadata["type"]
 
-    embed_meta = msg.embeds[0].description if msg.embeds else None
-    if not embed_meta:
-        return
+    # Handle the interaction type
+    if interaction_type == "current_weather_state":
+        # Handle refresh (🔄)
+        if str(reaction.emoji) == "🔄":
+            await refresh_weather(reaction.message, metadata)
+        # Handle forecast (📆)
+        elif str(reaction.emoji) == "📆":
+            await handle_forecast_action(reaction.message, metadata)
 
-    await handle_reaction_add(msg, emoji, user, bot, embed_meta=embed_meta)
+
+async def refresh_weather(message, metadata):
+    """
+    Refresh the weather information for the given message.
+    """
+    # Example: Use metadata to fetch updated weather data
+    current_time = datetime.now(dt_timezone.utc)
+    gta_time = get_gta_time(current_time)
+    weather_state = get_weather_state(current_time)
+
+    # Update the embed
+    embed = message.embeds[0]
+    embed.set_field_at(0, name="Time", value=gta_time.str_game_time)
+    embed.set_field_at(2, name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
+    embed.set_field_at(3, name="Rain ETA", value=weather_state.rain_eta.str_eta)
+
+    # Edit the message with the updated embed
+    await message.edit(embed=embed)
+
+
+async def handle_forecast_action(message, metadata):
+    """
+    Handles any setup, pre-processing, or additional behavior
+    before showing a weather forecast.
+    """
+    # Extract relevant timezone or date components from metadata
+    embed_meta = message.embeds[0].description if message.embeds else None
+    time_zone_str = embed_meta.split('time_zone=')[1].split('/')[0] if embed_meta and "time_zone=" in embed_meta else "UTC"
+    await get_user_date(message, time_zone_str)
+async def show_forecast(msg, forecast: list[list[datetime, WeatherState]], date):
+    """
+    Show the weather forecast for a specific time period.
+    """
+    forecast_str = ""
+    for d, weather_state in forecast:
+        d = pytz_timezone("UTC").localize(d).astimezone(date.tzinfo)
+        forecast_str += f"{datetime.strftime(d, '%H:%M')} - " \
+                        f"{weather_state.weather.emoji} {weather_state.weather.name} " \
+                        f"{ZERO_WIDTH if weather_state.gta_time.is_day_time else MOON}\n"
+
+    embed = msg.embeds[0]
+    embed.title = f"**Forecast: \n" \
+                  f"{smart_day_time_format('{S} %b %Y @ %H:%M %Z', date)}**"
+    embed.description = f"```{forecast_str}```"
+
+    await msg.edit(embed=embed)
 
 
 @bot.event
@@ -685,11 +807,11 @@ async def on_reaction_remove(reaction, user):
         return
 
     embed_meta = msg.embeds[0].description if msg.embeds else None
-    if not embed_meta:
+    if not embed_meta or "embed_meta" not in embed_meta:
         return
 
     await handle_reaction_remove(msg, emoji, user, bot, embed_meta=embed_meta)
 
 
 # Start the bot with the token from your .env file
-bot.run(os.getenv('DISCORD_TOKEN'))
+bot.run(os.getenv('DISCORD_TOKEN', 'your-token-placeholder'))
