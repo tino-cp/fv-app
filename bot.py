@@ -1,12 +1,8 @@
 import os
 import logging
 from datetime import datetime, timedelta, timezone as dt_timezone
-
-from discord.utils import utcnow
-from pytz import timezone as pytz_timezone
 import discord
 from discord.ext import commands
-from discord import Embed, Message, Intents, User
 from pytz import timezone as pytz_timezone
 from dotenv import load_dotenv
 
@@ -275,6 +271,7 @@ def get_gta_time(date: datetime) -> GTATime:
         weather_period_time=total_gta_hours % WEATHER_PERIOD
     )
 
+
 # Function to get weather for a given time period
 def get_weather_for_period_time(weather_period_time: float) -> Weather:
     for i, period in enumerate(WEATHER_STATE_CHANGES):
@@ -442,22 +439,12 @@ async def send_weather(message: discord.Message) -> discord.Message:
     await msg.add_reaction(COUNTER_CLOCKWISE)
     return msg
 
-async def send_race_weather(ctx, weekday: str, start_hour: int = 18) -> None:
+async def send_race_weather(ctx, race_start_time: datetime) -> None:
     """
-    Sends a weather forecast for a specified weekday and start time.
+    Sends a weather forecast for a specified race start time.
     :param ctx: The context of the command.
-    :param weekday: The weekday (e.g., 'Saturday', 'Sunday') for the race.
-    :param start_hour: The start hour (default is 18 representing 6 PM).
+    :param race_start_time: The start time of the race as a datetime object.
     """
-    current_time = datetime.now(dt_timezone.utc)
-    today = current_time.weekday()
-
-    # Find the next occurrence of the specified weekday
-    target_weekday_index = WEEKDAYS.index(weekday)
-    days_ahead = (target_weekday_index - today + 7) % 7 or 7
-    race_day = current_time + timedelta(days=days_ahead)
-    race_start_time = race_day.replace(hour=start_hour, minute=0, second=0, microsecond=0)
-
     try:
         # Get the weather for the exact time
         race_weather_state = get_weather_state(race_start_time)
@@ -465,13 +452,43 @@ async def send_race_weather(ctx, weekday: str, start_hour: int = 18) -> None:
 
         # Prepare and send an embed with weather details
         embed = discord.Embed(
-            title=f"Race Weather for {weekday} at {start_hour}:00 (UTC)",
+            title=f"Race Weather for {race_start_time.strftime('%d-%m-%Y %H:%M')} UTC",
             color=discord.Color(ORANGE)
         )
-        embed.add_field(name="Race Date", value=race_start_time.strftime('%Y-%m-%d'))
-        embed.add_field(name="Time", value=gta_time.str_game_time)
-        embed.add_field(name="Day", value=gta_time.weekday)
+        embed.add_field(name="Race Date", value=race_start_time.strftime('%d-%m-%Y'))
         embed.add_field(name="Weather", value=f"{race_weather_state.weather.name} {race_weather_state.weather.emoji}")
+
+        # Calculate Rain ETA and Duration Safely
+        rain_eta = get_rain_eta(
+            weather_period_time=race_weather_state.gta_time.weather_period_time,
+            weather=race_weather_state.weather
+        )
+
+        # Ensure duration is converted to an integer for calculations
+        if rain_eta.is_raining:
+            rain_duration_seconds = rain_eta.sec_eta
+        else:
+            next_rain_period = get_next_rain_periods(race_weather_state.gta_time.weather_period_time, 1)
+            if next_rain_period and "duration" in next_rain_period[0]:
+                # Strip 'm' and convert to minutes as integer
+                duration_str = next_rain_period[0]["duration"]
+                if duration_str.endswith("m"):
+                    rain_duration_minutes = int(
+                        duration_str[:-1])  # Removes 'm' and converts the remaining number to int
+                    rain_duration_seconds = rain_duration_minutes * 60
+                else:
+                    rain_duration_seconds = 0  # Default fallback in case there is no valid duration string
+            else:
+                rain_duration_seconds = 0  # Fallback to 0 if no valid duration is found
+
+        rain_duration_minutes = rain_duration_seconds // 60
+        if rain_duration_minutes >= 60:
+            formatted_duration = f"{rain_duration_minutes // 60}h {rain_duration_minutes % 60}m"
+        else:
+            formatted_duration = f"{rain_duration_minutes}m"
+
+        # Add fields to the embed
+        embed.add_field(name="Rain Duration", value=formatted_duration)
         embed.add_field(name="Rain ETA", value=race_weather_state.rain_eta.str_eta)
         embed.set_thumbnail(
             url=race_weather_state.weather.day_thumbnail if gta_time.is_day_time else race_weather_state.weather.night_thumbnail
@@ -481,6 +498,7 @@ async def send_race_weather(ctx, weekday: str, start_hour: int = 18) -> None:
 
     except Exception as e:
         await ctx.send(f"An error occurred while fetching the race weather: {str(e)}")
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -495,27 +513,57 @@ async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
 @bot.command()
-async def race(ctx, series: str = "f1"):
+async def race(ctx, series: str = "f1", round: str = None):
+    series = series.lower()
+    round = round.lower() if round else None
+    current_time = datetime.now(dt_timezone.utc)
     """
     Fetches the race weather for F1 or F2 schedules.
-    F1: Every Sunday at 6 PM UTC
-    F2: Every Saturday at 6 PM UTC
+    F1: Round 1 (r1) starts on January 5th at 19:00 UTC, with subsequent rounds weekly at the same time.
+    F2: Round 1 (r1) starts on January 4th at 18:00 UTC, with subsequent rounds weekly at the same time.
     Example usage:
-      !race f1
-      !race f2
-    If no series is provided, it defaults to F1.
+      !race f1 r1
+      !race f2 r2
+    If no valid round is provided, the closest upcoming round will be determined automatically.
     """
-    if series.lower() == "f1":
-        await send_race_weather(ctx, "Sunday", 18)
-    elif series.lower() == "f2":
-        await send_race_weather(ctx, "Saturday", 18)
-    else:
-        await ctx.send("Invalid series! Use `!race f1` for F1 or `!race f2` for F2.")
+    if series == "f1":
+        f1_race_start = datetime(2025, 1, 5, 19, 0)  # Updated start date
+        if not round or not round.startswith("r") or not round[1:].isdigit():
+            # Automatically detect the closest upcoming round
+            round_number = max(1, int((current_time - f1_race_start).days // 7) + 1)
+            race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
+            if race_start_time < current_time:
+                round_number += 1
+                race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
+            await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
+            await send_race_weather(ctx, race_start_time)  # Added
+            return
+        round_number = int(round[1:])
+        race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
+        await send_race_weather(ctx, race_start_time)
+    elif series == "f2":
+        f2_race_start = datetime(2025, 1, 4, 18, 0)  # Updated start date
+        if not round or not round.startswith("r") or not round[1:].isdigit():
+            # Automatically detect the closest upcoming round
+            round_number = max(1, int((current_time - f2_race_start).days // 7) + 1)
+            race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
+            if race_start_time < current_time:
+                round_number += 1
+                race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
+            await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
+            await send_race_weather(ctx, race_start_time)  # Added
+            return
+        round_number = int(round[1:])
+        race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
+        await send_race_weather(ctx, race_start_time)
+        await ctx.send("Invalid series. Please specify either F1 or F2.")  # Modified error message
 
 @race.error
 async def race_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("You forgot to specify the series! Use `!race f1` or `!race f2`.")
+    elif isinstance(error, ValueError):  # Added
+        await ctx.send("Invalid round. Please specify a valid round number.")  # Added
 
 
 @bot.command(name='weather', help='Fetch the current weather state only.')
