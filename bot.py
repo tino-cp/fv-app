@@ -2,7 +2,6 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Any
-
 import discord
 from discord.ext import commands
 from pytz import timezone as pytz_timezone
@@ -437,27 +436,43 @@ async def send_weather(message: discord.Message) -> discord.Message:
     await msg.add_reaction(COUNTER_CLOCKWISE)
     return msg
 
-async def process_race_series(ctx, race_round: str, series_start_date: datetime, current_time: datetime):
+async def fetch_closest_upcoming_round(series_start_date: datetime, current_time: datetime) -> int:
+    """
+    Fetches the closest upcoming round for a race series.
+    """
+    if series_start_date.tzinfo is None:
+        series_start_date = series_start_date.replace(tzinfo=dt_timezone.utc)
+    # Calculate the difference in days between the current time and the series start date
+    days_since_start = (current_time - series_start_date).days
+
+    # Determine the current round number
+    round_number = max(1, days_since_start // 7 + 1)
+
+    # Calculate the start time of the round
+    race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
+
+    # If the current time has passed the race start time, move to the next round
+    if race_start_time < current_time:
+        round_number += 1
+
+    return round_number
+
+async def process_race_series(ctx, race_round: str, series_start_date: datetime, current_time: datetime, series: str = "f1"):
     if not race_round or not race_round.startswith("r") or not race_round[1:].isdigit():
-        # Automatically detect the closest upcoming round
-        round_number = max(1, int((current_time - series_start_date).days // 7) + 1)
+        round_number = await fetch_closest_upcoming_round(series_start_date, current_time)
         race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
-        if race_start_time < current_time:
-            round_number += 1
-            race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
-        await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
-        await send_race_weather(ctx, race_start_time)
+        await send_race_weather(ctx, race_start_time, series)
         return
-    # If a specific round is mentioned
     round_number = int(race_round[1:])
     race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
-    await send_race_weather(ctx, race_start_time)
+    await send_race_weather(ctx, race_start_time, series)
 
-async def send_race_weather(ctx, race_start_time: datetime) -> None:
+async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None:
     """
     Sends a weather forecast for a specified race start time.
     :param ctx: The context of the command.
     :param race_start_time: The start time of the race as a datetime object.
+    :param series: The racing series (e.g., F1 or F2).
     """
     try:
         # Get the weather for the exact time
@@ -466,7 +481,7 @@ async def send_race_weather(ctx, race_start_time: datetime) -> None:
 
         # Prepare and send an embed with weather details
         embed = discord.Embed(
-            title=f"Race Weather for {race_start_time.strftime('%d-%m-%Y %H:%M')} UTC",
+            title=f"{series.upper()} Race Weather for {race_start_time.strftime('%d-%m-%Y %H:%M')} UTC",
             color=discord.Color(ORANGE)
         )
         embed.add_field(name="Weather", value=f"{race_weather_state.weather.name} {race_weather_state.weather.emoji}")
@@ -526,90 +541,120 @@ async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
 @bot.command()
-async def race(ctx, series: str = "f1", race_round: str = None):
-    series = series.lower()
-    race_round = race_round.lower() if race_round else None
-    current_time = datetime.now(dt_timezone.utc)
-
+async def race(ctx, series: str = None, race_round: str = None):
     """
     Fetches the race weather for F1 or F2 schedules.
     Example usage:
       !race f1 r1
       !race f2 r2
     """
-    if series == "f1":
-        f1_race_start = datetime(2025, 1, 5, 19, 0)
-        await process_race_series(ctx, race_round, f1_race_start, current_time)
-    elif series == "f2":
-        f2_race_start = datetime(2025, 1, 4, 19, 0)
-        await process_race_series(ctx, race_round, f2_race_start, current_time)
+    series = (series or "f1").lower()
+    race_round = race_round.lower() if race_round else None
+    current_time = datetime.now(dt_timezone.utc)
+
+    race_start_dates = {
+        "f1": datetime(2025, 1, 5, 19, 0, tzinfo=dt_timezone.utc),
+        "f2": datetime(2025, 1, 4, 19, 0, tzinfo=dt_timezone.utc)
+    }
+
+    if series in race_start_dates:
+        race_start = race_start_dates[series]
+        if not race_round:
+            round_number = await fetch_closest_upcoming_round(race_start, current_time)
+            race_round = f"r{round_number}"
+        await process_race_series(ctx, race_round, race_start, current_time, series)
     else:
-        await ctx.send("Invalid series! Please specify 'f1' or 'f2'.")
+        await ctx.send("Invalid series! Please specify either 'f1' or 'f2'.")
 
 @race.error
 async def race_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("You forgot to specify the series! Use `!race f1` or `!race f2`.")
-    elif isinstance(error, ValueError):  # Added
-        await ctx.send("Invalid round. Please specify a valid round number.")  # Added
+        await ctx.send("You forgot to specify the series! Use `!race`, `!race f1`, or `!race f2`.")
+    elif isinstance(error, ValueError):
+        await ctx.send("Invalid round. Please specify a valid race round number.")
 
+@bot.command()
+async def weather(ctx, location: str = None) -> None:
+    """
+    Displays weather information for the specified location or race.
+    :param ctx: The context of the command.
+    :param location: Optional argument to specify a location.
+    """
+    try:
+        # Fetch weather state based on location or default context
+        current_time = datetime.now(dt_timezone.utc)
+        gta_time = get_gta_time(current_time)
+        weather_state = get_weather_state(current_time)
 
-@bot.command(name='weather', help='Fetch the current weather state only.')
-async def weather(ctx):
-    """
-    Fetches the current weather state and sends it to the Discord channel.
-    """
-    current_time = datetime.now(dt_timezone.utc)
-    gta_time = get_gta_time(current_time)
-    weather_state = get_weather_state(current_time)
-    future_weather_state = get_weather_state(
-        current_time + timedelta(
-            seconds=weather_state.rain_eta.sec_eta,
-            minutes=1
+        # Prepare the embed for weather information
+        embed = discord.Embed(
+            title=f"Current Weather at {current_time.strftime('%H:%M')} UTC",
+            color=discord.Color.orange()
         )
-    )
-# Generate the Current Weather embed
-    current_weather_embed = discord.Embed(
-        title="Current Weather",
-        color=discord.Color.orange()
-    )
-    current_weather_embed.add_field(name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
-    current_weather_embed.add_field(name="Rain ETA", value=weather_state.rain_eta.str_eta)
-    current_weather_embed.add_field(
-        name="Rain Length",
-        value=f"\nIt's going to be {'dry' if weather_state.rain_eta.is_raining else 'wet'} "
-              f"for {future_weather_state.rain_eta.str_eta}."
-    )
-    current_weather_embed.set_thumbnail(
-        url=weather_state.weather.day_thumbnail if gta_time.is_day_time else weather_state.weather.night_thumbnail
-    )
-    current_weather_embed.set_footer(text="React with 🔄 to refresh")
+        embed.add_field(name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
 
-    # Send embed and track the message ID in bot_state
-    current_weather_message = await ctx.send(embed=current_weather_embed)
-    bot_state[current_weather_message.id] = {
-        "type": "current_weather_state",
-        "time": current_time,
-        "channel_id": ctx.channel.id
-    }
-    await current_weather_message.add_reaction(COUNTER_CLOCKWISE)
+        # Calculate and display Rain ETA and Rain Duration
+        rain_eta = get_rain_eta(
+            weather_period_time=weather_state.gta_time.weather_period_time,
+            gta_weather=weather_state.weather
+        )
 
+        # Handle rain duration logic
+        rain_duration_seconds = 0  # Default to no rain
+        if rain_eta.is_raining:
+            rain_duration_seconds = rain_eta.sec_eta
+        else:
+            # Get the next rain period for future rain duration
+            next_rain_period = get_next_rain_periods(weather_state.gta_time.weather_period_time, 1)
+            if next_rain_period and "duration" in next_rain_period[0]:
+                duration_str = next_rain_period[0]["duration"]  # e.g., "30m"
+                if duration_str.endswith("m"):
+                    # Strip "m" and calculate seconds
+                    rain_duration_seconds = int(duration_str[:-1]) * 60
+
+        # Format rain duration for display
+        rain_duration_minutes = rain_duration_seconds // 60
+        if rain_duration_minutes >= 60:
+            formatted_duration = f"{rain_duration_minutes // 60}h {rain_duration_minutes % 60}m"
+        else:
+            formatted_duration = f"{rain_duration_minutes}m"
+
+        # Add rain-related information to embed
+        embed.add_field(name="Rain ETA", value=weather_state.rain_eta.str_eta)
+        embed.add_field(
+            name="Rain Length",
+            value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}"
+        )
+        # Add a thumbnail for weather time (day/night)
+        embed.set_thumbnail(
+            url=weather_state.weather.day_thumbnail if gta_time.is_day_time else weather_state.weather.night_thumbnail
+        )
+        embed.set_footer(text="React with 🔄 to refresh")
+
+        current_weather_message = await ctx.send(embed=embed)
+        bot_state[current_weather_message.id] = {
+            "type": "current_weather_state",
+            "time": current_time,
+            "channel_id": ctx.channel.id
+        }
+        await current_weather_message.add_reaction(COUNTER_CLOCKWISE)
+
+    except Exception as e:
+        # Send user-friendly error if something fails during execution
+        await ctx.send(f"An error occurred while fetching the weather: {str(e)}")
 
 @bot.event
 async def on_reaction_add(reaction, user):
     """
     Handles reactions for weather refresh.
     """
-    # Ignore bot reactions
     if user.bot:
         return
 
-    # Check if the message ID is in bot_state
     message_id = reaction.message.id
     if message_id not in bot_state:
-        return  # No metadata available, do nothing
+        return
 
-    # Get the metadata for the message
     metadata = bot_state[message_id]
     interaction_type = metadata["type"]
 
@@ -623,19 +668,48 @@ async def refresh_weather(message):
     """
     Refresh the weather information for the given message.
     """
-    # Example: Use metadata to fetch updated weather data
-    current_time = datetime.now(dt_timezone.utc)
-    gta_time = get_gta_time(current_time)
-    weather_state = get_weather_state(current_time)
+    try:
+        # Fetch updated weather data
+        current_time = datetime.now(dt_timezone.utc)
+        weather_state = get_weather_state(current_time)
 
-    # Update the embed
-    embed = message.embeds[0]
-    embed.set_field_at(0, name="Time", value=gta_time.str_game_time)
-    embed.set_field_at(2, name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
-    embed.set_field_at(3, name="Rain ETA", value=weather_state.rain_eta.str_eta)
+        # Access the existing embed
+        embed = message.embeds[0]
 
-    # Edit the message with the updated embed
-    await message.edit(embed=embed)
+        # Update fields in the embed
+        embed.title = f"Current Weather at {current_time.strftime('%H:%M')} UTC"
+        embed.set_field_at(0, name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
+        embed.set_field_at(1, name="Rain ETA", value=weather_state.rain_eta.str_eta)
+
+        # Handle rain duration logic
+        rain_duration_seconds = 0
+        if weather_state.rain_eta.is_raining:
+            rain_duration_seconds = weather_state.rain_eta.sec_eta
+        else:
+            # Get the next rain period if it exists
+            next_rain_period = get_next_rain_periods(weather_state.gta_time.weather_period_time, 1)
+            if next_rain_period and "duration" in next_rain_period[0]:
+                duration_str = next_rain_period[0]["duration"]  # e.g., "30m"
+                if duration_str.endswith("m"):
+                    rain_duration_seconds = int(duration_str[:-1]) * 60  # Strip "m" and convert to seconds
+
+        # Format rain duration
+        rain_duration_minutes = rain_duration_seconds // 60
+        if rain_duration_minutes >= 60:
+            formatted_duration = f"{rain_duration_minutes // 60}h {rain_duration_minutes % 60}m"
+        else:
+            formatted_duration = f"{rain_duration_minutes}m"
+
+        # Update the rain length field in the embed
+        embed.set_field_at(2, name="Rain Length",
+                           value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}")
+
+        # Edit the message with the updated embed
+        await message.edit(embed=embed)
+
+    except Exception as e:
+        # Handle errors during the refresh
+        await message.channel.send(f"An error occurred while refreshing the weather: {str(e)}")
 
 async def show_forecast(msg, forecast: list[list[datetime, WeatherState]], date):
     """
@@ -649,8 +723,7 @@ async def show_forecast(msg, forecast: list[list[datetime, WeatherState]], date)
                         f"{ZERO_WIDTH if weather_state.gta_time.is_day_time else MOON}\n"
 
     embed = msg.embeds[0]
-    embed.title = f"**Forecast: \n" \
-                  f"{smart_day_time_format('{S} %b %Y @ %H:%M %Z', date)}**"
+    embed.title = f"**Forecast: \n{smart_day_time_format('{S} %b %Y @ %H:%M %Z', date)}**"
     embed.description = f"```{forecast_str}```"
 
     await msg.edit(embed=embed)
