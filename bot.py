@@ -1,6 +1,8 @@
 import os
 import logging
 from datetime import datetime, timedelta, timezone as dt_timezone
+from typing import Any
+
 import discord
 from discord.ext import commands
 from pytz import timezone as pytz_timezone
@@ -62,7 +64,7 @@ LETTERS_EMOJIS = {  # Emoji mapping for letters (A-Z) and additional special cha
 
 bot_state = {}
 
-def hours_to_HHMM(hours: float) -> str:
+def hours_to_hhmm(hours: float) -> str:
     """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
     h, m = divmod(round(hours * 60), 60)
     return f"{h:02}:{m:02}"
@@ -80,7 +82,7 @@ class Weather:
 class GTATime:
     def __init__(self, hours_game_time: float, weekday, weather_period_time: float):
         self.hours_game_time = hours_game_time
-        self.str_game_time = hours_to_HHMM(self.hours_game_time)
+        self.str_game_time = hours_to_hhmm(self.hours_game_time)
         self.weekday = weekday
         self.weather_period_time = weather_period_time
         self.is_day_time = SUNRISE_TIME <= self.hours_game_time < SUNSET_TIME
@@ -126,8 +128,8 @@ class RainETA:
 
 class WeatherState:
     """Represents the full current weather conditions"""
-    def __init__(self, weather: Weather, gta_time: GTATime, rain_eta: RainETA):
-        self.weather = weather
+    def __init__(self, gta_weather: Weather, gta_time: GTATime, rain_eta: RainETA):
+        self.weather = gta_weather
         self.gta_time = gta_time
         self.rain_eta = rain_eta
 
@@ -230,8 +232,6 @@ WEATHER_STATE_CHANGES = [
 async def handle_reaction_add(
         msg: discord.Message,
         emoji: str,
-        user: discord.User,
-        client: discord.Client,
         embed_meta: str = ""
 ) -> None:
     embed_type = embed_meta.split('type=')[1].split('/')[0]
@@ -245,8 +245,6 @@ async def handle_reaction_add(
 async def handle_reaction_remove(
         msg: discord.Message,
         emoji: str,
-        user: discord.User,
-        client: discord.Client,
         embed_meta: str = ""
 ) -> None:
     embed_type = embed_meta.split('type=')[1].split('/')[0]
@@ -281,13 +279,13 @@ def get_weather_for_period_time(weather_period_time: float) -> Weather:
 
 
 # Function to check if it's raining
-def check_is_raining(weather: Weather):
-    return weather == WEATHER_STATES['raining'] or weather == WEATHER_STATES['drizzling']
+def check_is_raining(gta_weather: Weather):
+    return gta_weather == WEATHER_STATES['raining'] or gta_weather == WEATHER_STATES['drizzling']
 
 
 # Function to calculate rain ETA
-def get_rain_eta(weather_period_time: float, weather: Weather) -> RainETA:
-    is_raining = check_is_raining(weather)
+def get_rain_eta(weather_period_time: float, gta_weather: Weather) -> RainETA:
+    is_raining = check_is_raining(gta_weather)
 
     len_weather_state_changes = len(WEATHER_STATE_CHANGES)
     for i in range(len_weather_state_changes * 2):
@@ -362,7 +360,7 @@ def get_gta_time_from_input(input_datetime: datetime) -> GTATime:
     return GTATime(current_gta_hour, weekday, total_gta_hours % WEATHER_PERIOD)
 
 
-def get_forecast(date: datetime, hours=4) -> list[list[datetime, WeatherState]]:
+def get_forecast(date: datetime, hours=4) -> list[list[datetime | WeatherState | Any]]:
     weather_states = []
 
     d = date
@@ -381,11 +379,11 @@ def get_forecast(date: datetime, hours=4) -> list[list[datetime, WeatherState]]:
 
 def get_weather_state(date: datetime) -> WeatherState:
     gta_time: GTATime = get_gta_time(date)
-    weather: Weather = get_weather_for_period_time(gta_time.weather_period_time)
-    rain_eta = get_rain_eta(gta_time.weather_period_time, weather)
+    gta_weather: Weather = get_weather_for_period_time(gta_time.weather_period_time)
+    rain_eta = get_rain_eta(gta_time.weather_period_time, gta_weather)
 
     return WeatherState(
-        weather, gta_time, rain_eta
+        gta_weather, gta_time, rain_eta
     )
 
 def smart_day_time_format(date_format: str, dt: datetime) -> str:
@@ -425,7 +423,7 @@ async def send_forecast(msg: discord.Message, forecast: list[list[datetime, Weat
 async def send_weather(message: discord.Message) -> discord.Message:
     utc_now = datetime.now(dt_timezone.utc)
     weather_state = get_weather_state(utc_now)
-    future_weather_state = get_weather_state(utc_now + timedelta(seconds=weather_state.rain_eta.sec_eta))
+
     rain_str = f"Rain will {'end' if weather_state.rain_eta.is_raining else 'begin'} in {weather_state.rain_eta.str_eta}."
     embed = discord.Embed(
         colour=discord.Colour(ORANGE),
@@ -438,6 +436,22 @@ async def send_weather(message: discord.Message) -> discord.Message:
     msg = await message.channel.send(embed=embed)
     await msg.add_reaction(COUNTER_CLOCKWISE)
     return msg
+
+async def process_race_series(ctx, race_round: str, series_start_date: datetime, current_time: datetime):
+    if not race_round or not race_round.startswith("r") or not race_round[1:].isdigit():
+        # Automatically detect the closest upcoming round
+        round_number = max(1, int((current_time - series_start_date).days // 7) + 1)
+        race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
+        if race_start_time < current_time:
+            round_number += 1
+            race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
+        await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
+        await send_race_weather(ctx, race_start_time)
+        return
+    # If a specific round is mentioned
+    round_number = int(race_round[1:])
+    race_start_time = series_start_date + timedelta(weeks=(round_number - 1))
+    await send_race_weather(ctx, race_start_time)
 
 async def send_race_weather(ctx, race_start_time: datetime) -> None:
     """
@@ -455,13 +469,12 @@ async def send_race_weather(ctx, race_start_time: datetime) -> None:
             title=f"Race Weather for {race_start_time.strftime('%d-%m-%Y %H:%M')} UTC",
             color=discord.Color(ORANGE)
         )
-        embed.add_field(name="Race Date", value=race_start_time.strftime('%d-%m-%Y'))
         embed.add_field(name="Weather", value=f"{race_weather_state.weather.name} {race_weather_state.weather.emoji}")
 
         # Calculate Rain ETA and Duration Safely
         rain_eta = get_rain_eta(
             weather_period_time=race_weather_state.gta_time.weather_period_time,
-            weather=race_weather_state.weather
+            gta_weather=race_weather_state.weather
         )
 
         # Ensure duration is converted to an integer for calculations
@@ -488,8 +501,8 @@ async def send_race_weather(ctx, race_start_time: datetime) -> None:
             formatted_duration = f"{rain_duration_minutes}m"
 
         # Add fields to the embed
-        embed.add_field(name="Rain Duration", value=formatted_duration)
         embed.add_field(name="Rain ETA", value=race_weather_state.rain_eta.str_eta)
+        embed.add_field(name="Rain Length", value=f"It's going to be wet for {formatted_duration}")
         embed.set_thumbnail(
             url=race_weather_state.weather.day_thumbnail if gta_time.is_day_time else race_weather_state.weather.night_thumbnail
         )
@@ -513,50 +526,25 @@ async def on_ready():
     print(f"Logged in as {bot.user.name}")
 
 @bot.command()
-async def race(ctx, series: str = "f1", round: str = None):
+async def race(ctx, series: str = "f1", race_round: str = None):
     series = series.lower()
-    round = round.lower() if round else None
+    race_round = race_round.lower() if race_round else None
     current_time = datetime.now(dt_timezone.utc)
+
     """
     Fetches the race weather for F1 or F2 schedules.
-    F1: Round 1 (r1) starts on January 5th at 19:00 UTC, with subsequent rounds weekly at the same time.
-    F2: Round 1 (r1) starts on January 4th at 18:00 UTC, with subsequent rounds weekly at the same time.
     Example usage:
       !race f1 r1
       !race f2 r2
-    If no valid round is provided, the closest upcoming round will be determined automatically.
     """
     if series == "f1":
-        f1_race_start = datetime(2025, 1, 5, 19, 0)  # Updated start date
-        if not round or not round.startswith("r") or not round[1:].isdigit():
-            # Automatically detect the closest upcoming round
-            round_number = max(1, int((current_time - f1_race_start).days // 7) + 1)
-            race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
-            if race_start_time < current_time:
-                round_number += 1
-                race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
-            await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
-            await send_race_weather(ctx, race_start_time)  # Added
-            return
-        round_number = int(round[1:])
-        race_start_time = f1_race_start + timedelta(weeks=(round_number - 1))
-        await send_race_weather(ctx, race_start_time)
+        f1_race_start = datetime(2025, 1, 5, 19, 0)
+        await process_race_series(ctx, race_round, f1_race_start, current_time)
     elif series == "f2":
-        f2_race_start = datetime(2025, 1, 4, 18, 0)  # Updated start date
-        if not round or not round.startswith("r") or not round[1:].isdigit():
-            # Automatically detect the closest upcoming round
-            round_number = max(1, int((current_time - f2_race_start).days // 7) + 1)
-            race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
-            if race_start_time < current_time:
-                round_number += 1
-                race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
-            await ctx.send(f"No round specified. Closest upcoming round: r{round_number}.")
-            await send_race_weather(ctx, race_start_time)  # Added
-            return
-        round_number = int(round[1:])
-        race_start_time = f2_race_start + timedelta(weeks=(round_number - 1))
-        await send_race_weather(ctx, race_start_time)
-        await ctx.send("Invalid series. Please specify either F1 or F2.")  # Modified error message
+        f2_race_start = datetime(2025, 1, 4, 19, 0)
+        await process_race_series(ctx, race_round, f2_race_start, current_time)
+    else:
+        await ctx.send("Invalid series! Please specify 'f1' or 'f2'.")
 
 @race.error
 async def race_error(ctx, error):
@@ -585,8 +573,6 @@ async def weather(ctx):
         title="Current Weather",
         color=discord.Color.orange()
     )
-    current_weather_embed.add_field(name="Time", value=gta_time.str_game_time)
-    current_weather_embed.add_field(name="Day", value=gta_time.weekday)
     current_weather_embed.add_field(name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
     current_weather_embed.add_field(name="Rain ETA", value=weather_state.rain_eta.str_eta)
     current_weather_embed.add_field(
@@ -631,9 +617,9 @@ async def on_reaction_add(reaction, user):
     if interaction_type == "current_weather_state":
         # Handle refresh (🔄)
         if str(reaction.emoji) == COUNTER_CLOCKWISE:
-            await refresh_weather(reaction.message, metadata)
+            await refresh_weather(reaction.message)
 
-async def refresh_weather(message, metadata):
+async def refresh_weather(message):
     """
     Refresh the weather information for the given message.
     """
@@ -689,7 +675,7 @@ async def rain(ctx):
         return
 
     rain_forecast_embed = discord.Embed(
-        title="🌧️ Next Rain Periods (UTC)",
+        title=f"🌧️ Next Rain Periods {datetime.now(dt_timezone.utc).strftime('%d-%m-%Y %H:%M %Z')}",
         color=discord.Color.blue()
     )
 
