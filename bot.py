@@ -454,7 +454,7 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
         # Calculate Rain ETA and Duration Safely
         rain_eta = get_rain_eta(
             weather_period_time=race_weather_state.gta_time.weather_period_time,
-            gta_weather=race_weather_state.weather
+            weather_instance=race_weather_state.weather
         )
 
         # Ensure duration is converted to an integer for calculations
@@ -559,7 +559,7 @@ async def weather(ctx, location: str = None) -> None:
         # Calculate and display Rain ETA and Rain Duration
         rain_eta = get_rain_eta(
             weather_period_time=weather_state.gta_time.weather_period_time,
-            gta_weather=weather_state.weather
+            weather_instance=weather_state.weather
         )
 
         # Handle rain duration logic
