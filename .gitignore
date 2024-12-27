@@ -1,2 +1,33 @@
+# Exclude environment files (sensitive information)
 .env
-.idea
+
+# JetBrains IDE settings folders (e.g., PyCharm)
+.idea/
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# Virtual environment directories
+env/
+venv/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Operating system files
+.DS_Store       # macOS files
+Thumbs.db       # Windows thumbnails
+desktop.ini     # Windows desktop settings
+
+# Git-specific files
+*.lock
+*.swp
+*.bak
+*.orig
+
+# Coverage reports
+.coverage
+*.cover
