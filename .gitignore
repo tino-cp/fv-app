@@ -3,7 +3,7 @@
 
 # JetBrains IDE settings folders (e.g., PyCharm)
 .idea/*
-.idea/
+.idea\
 
 # Python bytecode and cache
 __pycache__/
