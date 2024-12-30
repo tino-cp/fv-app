@@ -17,6 +17,9 @@ EMBED_TYPES = [  # Supported embed types for reactions
     'current_weather', 'future_timezone_selection', 'future_weather_date'
 ]
 
+DEFAULT_TIMEZONE_STR = "UTC"
+DEFAULT_TIMEZONE = pytz_timezone(DEFAULT_TIMEZONE_STR)
+
 WEATHER_PERIOD = 384  # Number of in-game hours per weather cycle
 GAME_HOUR_LENGTH = 120  # IRL seconds per in-game hour
 SUNRISE_TIME = 5  # In-game sunrise hour
@@ -39,27 +42,9 @@ TIME_ZONES = {  # Mapping of key time zones by region and city
 ORANGE = int(0xF03C00)
 ZERO_WIDTH = chr(8203)  # Zero-width character for spacing
 RAIN_ETA_LABEL = "Rain ETA"
-SPACE_CHAR = "⠀"
-HEAVY_CHECKMARK = "✔"
-BALLOT_CHECKMARK = "☑️"
-WRENCH = "🔧"
-FLAG_ON_POST = "🚩"
 COUNTER_CLOCKWISE = "🔄"
 CALENDAR = "📆"
-RAIN_WITH_SUN = "🌦️"
-
 MOON = "🌙"
-BOOKS = "📚"
-THUMBSUP = "👍"
-THUMBSDOWN = "👎"
-SHRUG = "🤷"
-ORANGE_HEART = "🧡"
-NUMBERS_EMOJIS = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-LETTERS_EMOJIS = {  # Emoji mapping for letters (A-Z) and additional special characters
-    "a": "🇦", "b": "🇧", "c": "🇨", "d": "🇩", "e": "🇪", "f": "🇫", "g": "🇬", "h": "🇭", "i": "🇮",
-    "j": "🇯", "k": "🇰", "l": "🇱", "m": "🇲", "n": "🇳", "o": "🇴", "p": "🇵", "q": "🇶", "r": "🇷",
-    "s": "🇸", "t": "🇹", "u": "🇺", "v": "🇻", "w": "🇼", "x": "🇽", "y": "🇾", "z": "🇿", "?": "❔"
-}
 
 bot_state = {}
 
@@ -98,9 +83,8 @@ class RainETA:
         if self.sec_eta < 60:
             return 'Less than 1 minute'
 
-        minutes = self.sec_eta % 60
-        hours = int(self.sec_eta / 3600 + (minutes / 6000))
-        minutes = int((self.sec_eta - (hours * 3600)) / 60 + (minutes / 60))
+        minutes, seconds_left = divmod(int(self.sec_eta), 60)
+        hours, minutes = divmod(minutes, 60)
 
         if hours > 0:
             hours_suffix = "s" if hours > 1 else ""
@@ -130,9 +114,8 @@ class RainETA:
             return 'No rain'
 
         eta_time = current_time + timedelta(seconds=self.sec_eta)
-        tz = pytz_timezone(timezone_str)
-        eta_time_tz = eta_time.astimezone(tz)
-        return eta_time_tz.strftime("%Y-%m-%d %H:%M:%S")
+        eta_time_tz = convert_to_timezone(eta_time, timezone_str)
+        return format_datetime(eta_time_tz)
 
 class WeatherState:
     """Represents the full current weather conditions"""
@@ -236,32 +219,12 @@ WEATHER_STATE_CHANGES = [
     [377, WEATHER_STATES['partly_cloudy']]
 ]
 
-async def handle_reaction_add(
-        msg: discord.Message,
-        emoji: str,
-        embed_meta: str = ""
-) -> None:
-    embed_type = embed_meta.split('type=')[1].split('/')[0]
-
-    if embed_type == 'current_weather_state' and emoji == COUNTER_CLOCKWISE:
-        await send_weather(msg)
-
-
-async def handle_reaction_remove(
-        msg: discord.Message,
-        emoji: str,
-        embed_meta: str = ""
-) -> None:
-    embed_type = embed_meta.split('type=')[1].split('/')[0]
-
-    if embed_type == 'current_weather_state' and emoji == COUNTER_CLOCKWISE:
-        await send_weather(msg)
-
 # Function to get GTA time
-def get_gta_time(date: datetime) -> GTATime:
+def get_gta_time(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> GTATime:
     if date.tzinfo is None:
         date = date.replace(tzinfo=dt_timezone.utc)
-    timestamp: int = int((date - epoch).total_seconds())
+    localized_date = convert_to_timezone(date, timezone)
+    timestamp: int = int((localized_date - epoch).total_seconds())
     total_gta_hours: float = timestamp / GAME_HOUR_LENGTH
     weekday = WEEKDAYS[int(total_gta_hours % 168 / 24) - 1]
     current_gta_hour: float = total_gta_hours % 24
@@ -351,15 +314,9 @@ def get_next_rain_periods(weather_period_time: float, count: int) -> list[dict]:
 
     return result
 
-def get_gta_time_from_input(input_datetime: datetime) -> GTATime:
-    timestamp: int = int((input_datetime - epoch).total_seconds())
-    total_gta_hours: float = timestamp / GAME_HOUR_LENGTH
-    weekday = WEEKDAYS[int(total_gta_hours % 168 / 24) - 1]
-    current_gta_hour: float = total_gta_hours % 24
-    return GTATime(current_gta_hour, weekday, total_gta_hours % WEATHER_PERIOD)
+def get_weather_state(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> WeatherState:
 
-def get_weather_state(date: datetime) -> WeatherState:
-    gta_time: GTATime = get_gta_time(date)
+    gta_time: GTATime = get_gta_time(date, timezone)
     weather_instance: Weather = get_weather_for_period_time(gta_time.weather_period_time)
     rain_eta = get_rain_eta(gta_time.weather_period_time, weather_instance)
 
@@ -384,9 +341,31 @@ def num_suffix(num: int) -> str:
 
     return f"{num}{'th' if 11 <= num <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')}"
 
-async def send_weather(message: discord.Message) -> discord.Message:
+def convert_to_timezone(date_time: datetime, timezone_str: str) -> datetime:
+    """
+    Convert a datetime object to the specified timezone.
+
+    :param date_time: The original datetime object.
+    :param timezone_str: The timezone to convert to.
+    :return: A datetime object in the specified timezone.
+    """
+    target_timezone = pytz_timezone(timezone_str)
+    return date_time.astimezone(target_timezone)
+
+def format_datetime(date_time: datetime, format_str: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
+    """
+    Format a datetime object into a string according to a specified format.
+
+    :param date_time: The datetime object to format.
+    :param format_str: The format string (default: "%Y-%m-%d %H:%M:%S %Z").
+    :return: A formatted datetime string.
+    """
+    return date_time.strftime(format_str)
+
+async def send_weather(message: discord.Message, timezone: str = DEFAULT_TIMEZONE_STR) -> discord.Message:
     utc_now = datetime.now(dt_timezone.utc)
-    weather_state = get_weather_state(utc_now)
+    future_weather_state = get_weather_state(utc_now + timedelta(days=1), timezone)
+    weather_state = get_weather_state(utc_now, timezone)
 
     rain_str = f"Rain will {'end' if weather_state.rain_eta.is_raining else 'begin'} in {weather_state.rain_eta.str_eta}."
     embed = discord.Embed(
@@ -408,7 +387,7 @@ async def fetch_closest_upcoming_round(series_start_date: datetime, current_time
     if series_start_date.tzinfo is None:
         series_start_date = series_start_date.replace(tzinfo=dt_timezone.utc)
     # Calculate the difference in days between the current time and the series start date
-    days_since_start = (current_time - series_start_date).days
+    days_since_start = (convert_to_timezone(current_time, DEFAULT_TIMEZONE_STR) - series_start_date).days
 
     # Determine the current round number
     round_number = max(1, days_since_start // 7 + 1)
@@ -528,13 +507,6 @@ async def race(ctx, series: str = None, race_round: str = None):
         await process_race_series(ctx, race_round, race_start, current_time, series)
     else:
         await ctx.send("Invalid series! Please specify either 'f1' or 'f2'.")
-
-@race.error
-async def race_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("You forgot to specify the series! Use `!race`, `!race f1`, or `!race f2`.")
-    elif isinstance(error, ValueError):
-        await ctx.send("Invalid round. Please specify a valid race round number.")
 
 @bot.command()
 async def weather(ctx, location: str = None) -> None:
@@ -674,23 +646,6 @@ async def refresh_weather(message):
         # Handle errors during the refresh
         await message.channel.send(f"An error occurred while refreshing the weather: {str(e)}")
 
-async def show_forecast(msg, forecast: list[list[datetime, WeatherState]], date):
-    """
-    Show the weather forecast for a specific time period.
-    """
-    forecast_str = ""
-    for d, weather_state in forecast:
-        d = pytz_timezone("UTC").localize(d).astimezone(date.tzinfo)
-        forecast_str += f"{datetime.strftime(d, '%H:%M')} - " \
-                        f"{weather_state.weather.emoji} {weather_state.weather.name} " \
-                        f"{ZERO_WIDTH if weather_state.gta_time.is_day_time else MOON}\n"
-
-    embed = msg.embeds[0]
-    embed.title = f"**Forecast: \n{smart_day_time_format('{S} %b %Y @ %H:%M %Z', date)}**"
-    embed.description = f"```{forecast_str}```"
-
-    await msg.edit(embed=embed)
-
 
 @bot.command(name='rain', help='Get the upcoming rain periods.')
 async def rain(ctx):
@@ -726,10 +681,10 @@ async def rain(ctx):
 
         # Calculate the time until the rain starts
         time_until_rain = rain_start_time - now
-        hours, remainder = divmod(time_until_rain.total_seconds(), 3600)
+        hours, remainder = divmod(int(time_until_rain.total_seconds()), 3600)
         minutes = remainder // 60
 
-        # Display time in hours and minutes, like "3h 18m"
+        # Explicitly cast hours and minutes to integers and format the string
         time_in_display = f"{int(hours)}h {int(minutes)}m" if hours > 0 else f"{int(minutes)}m"
 
         rain_forecast_embed.add_field(
