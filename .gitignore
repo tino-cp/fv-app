@@ -2,7 +2,8 @@
 .env
 
 # JetBrains IDE settings folders (e.g., PyCharm)
-.idea/
+.idea/*
+.idea\
 
 # Python bytecode and cache
 __pycache__/
@@ -11,6 +12,7 @@ __pycache__/
 # Virtual environment directories
 env/
 venv/
+.venv/
 
 # Logs and temporary files
 *.log
