@@ -1,5 +1,32 @@
 # wheaterbot
  
-used bits and pieces from the following sources:
+This bot is designed for Discord servers and provides detailed weather forecasts and race weather predictions. 
+It integrates Grand Theft Auto V in-game weather mechanics, real-time forecasts, 
+and supports Formula 1 and Formula 2 race schedules for the Formula V League.
 
-https://github.com/nosv1/GTALens
+## Key Features
+
+### 🌤️ Weather Forecasting
+- **Retrieve current weather conditions** in GTA V, including:
+  - 🌞 **Time of day** (day/night).
+  - 🌥️ **Weather states** (clear, cloudy, rainy, foggy, etc.).
+  - 🌧️ **Rain ETA** and **duration calculations**.
+
+### 🌧️ Rain Predictions
+- **Calculate and display upcoming rain periods**, with details like:
+  - 🕒 **Start time**.
+  - ⏳ **Duration**.
+  - 🌦️ **Type of weather** during the rain.
+
+### 🏎️ Race Weather Predictions
+- Get **race weather forecasts** for the **Formula V League**:
+  - 🏁 **Supports F1 and F2 schedules**.
+  - 📅 Provides **weather details** for specific rounds or the next race in the calendar.
+
+### 🎛️ Interactive Responses
+- **Rich embeds** with:
+  - Weather details 📝.
+  - Reaction-based updates 🔄.
+  - Thumbnails and icons for enhanced readability 🖼️.
+
+*This project is my own implementation of [WeatherBot](https://github.com/nosv1/GTALens) by [nosv1](https://github.com/nosv1)*
