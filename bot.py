@@ -11,25 +11,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+epoch: datetime = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)  # used to get total_seconds
+
 ALIASES = ['current_weather', 'future_forecast']
 
 EMBED_TYPES = [  # Supported embed types for reactions
     'current_weather', 'future_timezone_selection', 'future_weather_date'
 ]
 
-DEFAULT_TIMEZONE_STR = "UTC"
-DEFAULT_TIMEZONE = pytz_timezone(DEFAULT_TIMEZONE_STR)
-
-WEATHER_PERIOD = 384  # Number of in-game hours per weather cycle
-GAME_HOUR_LENGTH = 120  # IRL seconds per in-game hour
-SUNRISE_TIME = 5  # In-game sunrise hour
-SUNSET_TIME = 21  # In-game sunset hour
-
 WEEKDAYS = [  # Weekday names
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
 ]
-
-epoch: datetime = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)  # used to get total_seconds
 
 TIME_ZONES = {  # Mapping of key time zones by region and city
     "North America": {"Los Angeles": "US/Pacific", "Denver": "US/Mountain", "Chicago": "US/Central", "New York": "US/Eastern"},
@@ -39,8 +31,15 @@ TIME_ZONES = {  # Mapping of key time zones by region and city
     "Australia": {"Queensland": "Australia/Queensland", "Sydney": "Australia/Sydney"}
 }
 
+DEFAULT_TIMEZONE_STR = "UTC"
+DEFAULT_TIMEZONE = pytz_timezone(DEFAULT_TIMEZONE_STR)
+
+WEATHER_PERIOD = 384  # Number of in-game hours per weather cycle
+GAME_HOUR_LENGTH = 120  # IRL seconds per in-game hour
+SUNRISE_TIME = 5  # In-game sunrise hour
+SUNSET_TIME = 21  # In-game sunset hour
+
 ORANGE = int(0xF03C00)
-ZERO_WIDTH = chr(8203)  # Zero-width character for spacing
 RAIN_ETA_LABEL = "Rain ETA"
 RAIN_LENGTH_LABEL = "Rain Length"
 COUNTER_CLOCKWISE = "🔄"
@@ -48,12 +47,6 @@ CALENDAR = "📆"
 MOON = "🌙"
 
 bot_state = {}
-
-def hours_to_hhmm(hours: float) -> str:
-    """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
-    h, m = divmod(round(hours * 60), 60)
-    return f"{h:02}:{m:02}"
-
 
 class Weather:
     def __init__(self, name: str, emoji: str, day_thumbnail: str, night_thumbnail: str):
@@ -220,6 +213,49 @@ WEATHER_STATE_CHANGES = [
     [377, WEATHER_STATES['partly_cloudy']]
 ]
 
+def hours_to_hhmm(hours: float) -> str:
+    """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
+    h, m = divmod(round(hours * 60), 60)
+    return f"{h:02}:{m:02}"
+
+def smart_day_time_format(date_format: str, dt: datetime) -> str:
+    """
+    :param date_format: day in format should be {S}
+    :param dt: datetime
+    :return: formatted time as String
+    """
+
+    return dt.strftime(date_format).replace("{S}", f"{num_suffix(dt.day)}")
+
+def num_suffix(num: int) -> str:
+    """
+    :param num: ex. 2
+    :return: ex. 2nd
+    """
+
+    return f"{num}{'th' if 11 <= num <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')}"
+
+def convert_to_timezone(date_time: datetime, timezone_str: str) -> datetime:
+    """
+    Convert a datetime object to the specified timezone.
+
+    :param date_time: The original datetime object.
+    :param timezone_str: The timezone to convert to.
+    :return: A datetime object in the specified timezone.
+    """
+    target_timezone = pytz_timezone(timezone_str)
+    return date_time.astimezone(target_timezone)
+
+def format_datetime(date_time: datetime, format_str: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
+    """
+    Format a datetime object into a string according to a specified format.
+
+    :param date_time: The datetime object to format.
+    :param format_str: The format string (default: "%Y-%m-%d %H:%M:%S %Z").
+    :return: A formatted datetime string.
+    """
+    return date_time.strftime(format_str)
+
 # Function to get GTA time
 def get_gta_time(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> GTATime:
     if date.tzinfo is None:
@@ -266,9 +302,10 @@ def get_rain_eta(weather_period_time: float, weather_instance: Weather) -> RainE
 
     return RainETA(0, is_raining)
 
-def get_next_rain_periods(weather_period_time: float, count: int) -> list[dict]:
+def get_next_rain_periods(start_time: datetime, weather_period_time: float, count: int) -> list[dict]:
     """
     Get the next rain periods in chronological order, ensuring unique results with IRL timestamps.
+    :param start_time: The start time to calculate rain periods from.
     :param weather_period_time: The in-game weather period time.
     :param count: The number of rain periods to return.
     :return: A list of dictionaries containing rain period details.
@@ -295,7 +332,7 @@ def get_next_rain_periods(weather_period_time: float, count: int) -> list[dict]:
                 next_index = (i + 1) % len(extended_changes)
                 next_period_start = extended_changes[next_index][0]
 
-                rain_start_irl = datetime.now(dt_timezone.utc) + timedelta(
+                rain_start_irl = start_time + timedelta(
                     seconds=((period_start - weather_period_time) * GAME_HOUR_LENGTH)
                 )
                 rain_duration_seconds = (next_period_start - period_start) * GAME_HOUR_LENGTH
@@ -323,44 +360,6 @@ def get_weather_state(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> W
     return WeatherState(
         weather_instance, gta_time, rain_eta
     )
-
-def smart_day_time_format(date_format: str, dt: datetime) -> str:
-    """
-    :param date_format: day in format should be {S}
-    :param dt: datetime
-    :return: formatted time as String
-    """
-
-    return dt.strftime(date_format).replace("{S}", f"{num_suffix(dt.day)}")
-
-def num_suffix(num: int) -> str:
-    """
-    :param num: ex. 2
-    :return: ex. 2nd
-    """
-
-    return f"{num}{'th' if 11 <= num <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')}"
-
-def convert_to_timezone(date_time: datetime, timezone_str: str) -> datetime:
-    """
-    Convert a datetime object to the specified timezone.
-
-    :param date_time: The original datetime object.
-    :param timezone_str: The timezone to convert to.
-    :return: A datetime object in the specified timezone.
-    """
-    target_timezone = pytz_timezone(timezone_str)
-    return date_time.astimezone(target_timezone)
-
-def format_datetime(date_time: datetime, format_str: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
-    """
-    Format a datetime object into a string according to a specified format.
-
-    :param date_time: The datetime object to format.
-    :param format_str: The format string (default: "%Y-%m-%d %H:%M:%S %Z").
-    :return: A formatted datetime string.
-    """
-    return date_time.strftime(format_str)
 
 async def send_weather(message: discord.Message, timezone: str = DEFAULT_TIMEZONE_STR) -> discord.Message:
     utc_now = datetime.now(dt_timezone.utc)
@@ -440,7 +439,7 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
         if rain_eta.is_raining:
             rain_duration_seconds = rain_eta.sec_eta
         else:
-            next_rain_period = get_next_rain_periods(race_weather_state.gta_time.weather_period_time, 1)
+            next_rain_period = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time, 1)
             if next_rain_period and "duration" in next_rain_period[0]:
                 # Strip 'm' and convert to minutes as integer
                 duration_str = next_rain_period[0]["duration"]
@@ -468,8 +467,36 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
 
         await ctx.send(embed=embed)
 
+        # Add the 3 closest upcoming periods of rain as a separate embed
+        next_three_rain_periods = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time, 3)
+
+        rain_embed = discord.Embed(
+            title=f"🌧️ {series.upper()} Race Rain Weather Forecast",
+            color=discord.Color.blue()
+        )
+
+        for i, rain_info in enumerate(next_three_rain_periods):
+            rain_start_time = datetime.strptime(rain_info['start_time'].replace(" UTC", ""),"%Y-%m-%d %H:%M:%S").replace(tzinfo=dt_timezone.utc)
+            rain_end_time = datetime.strptime(rain_info['end_time'].replace(" UTC", ""), "%Y-%m-%d %H:%M:%S").replace(tzinfo=dt_timezone.utc)
+            time_until_rain = rain_start_time - race_start_time
+            hours, remainder = divmod(int(time_until_rain.total_seconds()), 3600)
+            minutes = remainder // 60
+            time_in_display = f"{int(hours)}h {int(minutes)}m" if hours > 0 else f"{int(minutes)}m"
+
+            rain_embed.add_field(
+                name=f"Next Rain #{i + 1}",
+                value=f"**Type:** {rain_info.get('type', 'Unknown')} {WEATHER_STATES[rain_info.get('type', 'unknown').lower()].emoji}\n"
+                      f"**ETA:** {time_in_display}\n"
+                      f"**Duration:** {rain_info.get('duration', 'Unknown')}\n"
+                      f"**Time:** {rain_start_time.strftime('%H:%M')} - {rain_end_time.strftime('%H:%M')}\n",
+            )
+
+        await ctx.send(embed=rain_embed)
+
     except Exception as e:
         await ctx.send(f"An error occurred while fetching the race weather: {str(e)}")
+
+# Bot commands
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -539,7 +566,7 @@ async def weather(ctx) -> None:
             rain_duration_seconds = rain_eta.sec_eta
         else:
             # Get the next rain period for future rain duration
-            next_rain_period = get_next_rain_periods(weather_state.gta_time.weather_period_time, 1)
+            next_rain_period = get_next_rain_periods(current_time, weather_state.gta_time.weather_period_time, 1)
             if next_rain_period and "duration" in next_rain_period[0]:
                 duration_str = next_rain_period[0]["duration"]  # e.g., "30m"
                 if duration_str.endswith("m"):
@@ -621,7 +648,7 @@ async def refresh_weather(message):
             rain_duration_seconds = weather_state.rain_eta.sec_eta
         else:
             # Get the next rain period if it exists
-            next_rain_period = get_next_rain_periods(weather_state.gta_time.weather_period_time, 1)
+            next_rain_period = get_next_rain_periods(current_time, weather_state.gta_time.weather_period_time, 1)
             if next_rain_period and "duration" in next_rain_period[0]:
                 duration_str = next_rain_period[0]["duration"]  # e.g., "30m"
                 if duration_str.endswith("m"):
@@ -635,8 +662,7 @@ async def refresh_weather(message):
             formatted_duration = f"{rain_duration_minutes}m"
 
         # Update the rain length field in the embed
-        embed.set_field_at(2, name=RAIN_LENGTH_LABEL,
-                           value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}")
+        embed.set_field_at(2, name=RAIN_LENGTH_LABEL, value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}")
 
         # Edit the message with the updated embed
         await message.edit(embed=embed)
@@ -653,7 +679,7 @@ async def rain(ctx):
     """
     current_time = datetime.now(dt_timezone.utc)
     weather_state = get_weather_state(current_time)
-    next_four_rain_periods = get_next_rain_periods(weather_state.gta_time.weather_period_time, 4)
+    next_four_rain_periods = get_next_rain_periods(current_time, weather_state.gta_time.weather_period_time, 4)
 
     if not next_four_rain_periods:
         fallback_embed = discord.Embed(
