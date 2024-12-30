@@ -42,6 +42,7 @@ TIME_ZONES = {  # Mapping of key time zones by region and city
 ORANGE = int(0xF03C00)
 ZERO_WIDTH = chr(8203)  # Zero-width character for spacing
 RAIN_ETA_LABEL = "Rain ETA"
+RAIN_LENGTH_LABEL = "Rain Length"
 COUNTER_CLOCKWISE = "🔄"
 CALENDAR = "📆"
 MOON = "🌙"
@@ -315,7 +316,6 @@ def get_next_rain_periods(weather_period_time: float, count: int) -> list[dict]:
     return result
 
 def get_weather_state(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> WeatherState:
-
     gta_time: GTATime = get_gta_time(date, timezone)
     weather_instance: Weather = get_weather_for_period_time(gta_time.weather_period_time)
     rain_eta = get_rain_eta(gta_time.weather_period_time, weather_instance)
@@ -460,8 +460,8 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
             formatted_duration = f"{rain_duration_minutes}m"
 
         # Add fields to the embed
-        embed.add_field(name="Rain ETA", value=race_weather_state.rain_eta.str_eta)
-        embed.add_field(name="Rain Length", value=f"It's going to be wet for {formatted_duration}")
+        embed.add_field(name=RAIN_ETA_LABEL, value=race_weather_state.rain_eta.str_eta)
+        embed.add_field(name=RAIN_LENGTH_LABEL, value=f"It's going to be wet for {formatted_duration}")
         embed.set_thumbnail(
             url=race_weather_state.weather.day_thumbnail if gta_time.is_day_time else race_weather_state.weather.night_thumbnail
         )
@@ -509,11 +509,10 @@ async def race(ctx, series: str = None, race_round: str = None):
         await ctx.send("Invalid series! Please specify either 'f1' or 'f2'.")
 
 @bot.command()
-async def weather(ctx, location: str = None) -> None:
+async def weather(ctx) -> None:
     """
     Displays weather information for the specified location or race.
     :param ctx: The context of the command.
-    :param location: Optional argument to specify a location.
     """
     try:
         # Fetch weather state based on location or default context
@@ -555,9 +554,9 @@ async def weather(ctx, location: str = None) -> None:
             formatted_duration = f"{rain_duration_minutes}m"
 
         # Add rain-related information to embed
-        embed.add_field(name="Rain ETA", value=weather_state.rain_eta.str_eta)
+        embed.add_field(name=RAIN_ETA_LABEL, value=weather_state.rain_eta.str_eta)
         embed.add_field(
-            name="Rain Length",
+            name=RAIN_LENGTH_LABEL,
             value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}"
         )
         # Add a thumbnail for weather time (day/night)
@@ -614,7 +613,7 @@ async def refresh_weather(message):
         # Update fields in the embed
         embed.title = f"Current Weather at {current_time.strftime('%H:%M')} UTC"
         embed.set_field_at(0, name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
-        embed.set_field_at(1, name="Rain ETA", value=weather_state.rain_eta.str_eta)
+        embed.set_field_at(1, name=RAIN_ETA_LABEL, value=weather_state.rain_eta.str_eta)
 
         # Handle rain duration logic
         rain_duration_seconds = 0
@@ -636,7 +635,7 @@ async def refresh_weather(message):
             formatted_duration = f"{rain_duration_minutes}m"
 
         # Update the rain length field in the embed
-        embed.set_field_at(2, name="Rain Length",
+        embed.set_field_at(2, name=RAIN_LENGTH_LABEL,
                            value=f"\nIt's going to be {'wet' if rain_duration_seconds > 0 else 'dry'} for {formatted_duration}")
 
         # Edit the message with the updated embed
