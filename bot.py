@@ -523,7 +523,7 @@ async def race(ctx, series: str = None, race_round: str = None):
 
     race_start_dates = {
         "f1": datetime(2025, 1, 5, 19, 0, tzinfo=dt_timezone.utc),
-        "f2": datetime(2025, 1, 4, 19, 0, tzinfo=dt_timezone.utc)
+        "f2": datetime(2025, 1, 4, 18, 0, tzinfo=dt_timezone.utc)
     }
 
     if series in race_start_dates:
