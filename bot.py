@@ -780,9 +780,6 @@ async def fetch_message_history(ctx):
         # Format the messages
         message_log = '\n'.join([f"[{msg.author.display_name}]: {msg.content}" for msg in messages])
 
-        # Log the messages to the console
-        print(f"Fetched Messages:\n{message_log}")
-
         # Send the messages to the Google Sheet webhook
         async with aiohttp.ClientSession() as session:
             webhook_url = "https://script.google.com/macros/s/AKfycbzbyLfB5xWSeoFy2lIIAVdGP0BFWezE2v3OnTNMXghjaqg4iGIos5IVSkGsOVqisiDT/exec?gid=0"
