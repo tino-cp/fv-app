@@ -256,6 +256,16 @@ def format_datetime(date_time: datetime, format_str: str = "%Y-%m-%d %H:%M:%S %Z
     """
     return date_time.strftime(format_str)
 
+def to_discord_timestamp(date_time: datetime, format: str = 'F') -> str:
+    """
+    Convert a datetime object to a Discord timestamp format.
+    :param date_time: The datetime object to convert.
+    :param format: The format for the timestamp (default: 'F').
+    :return: A string in the format <t:unix_timestamp:format>.
+    """
+    unix_timestamp = int(date_time.timestamp())
+    return f"<t:{unix_timestamp}:{format}>"
+
 # Function to get GTA time
 def get_gta_time(date: datetime, timezone: str = DEFAULT_TIMEZONE_STR) -> GTATime:
     if date.tzinfo is None:
@@ -424,7 +434,7 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
 
         # Prepare and send an embed with weather details
         embed = discord.Embed(
-            title=f"{series.upper()} Race Weather for {race_start_time.strftime('%d-%m-%Y %H:%M')} UTC",
+            title=f"{series.upper()} Race Weather for {to_discord_timestamp(race_start_time, 'F')}",
             color=discord.Color(ORANGE)
         )
         embed.add_field(name="Weather", value=f"{race_weather_state.weather.name} {race_weather_state.weather.emoji}")
@@ -436,21 +446,14 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
         )
 
         # Ensure duration is converted to an integer for calculations
-        if rain_eta.is_raining:
-            rain_duration_seconds = rain_eta.sec_eta
-        else:
-            next_rain_period = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time, 1)
+        rain_duration_seconds = rain_eta.sec_eta if rain_eta.is_raining else 0
+        if not rain_eta.is_raining:
+            next_rain_period = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time,
+                                                     1)
             if next_rain_period and "duration" in next_rain_period[0]:
-                # Strip 'm' and convert to minutes as integer
                 duration_str = next_rain_period[0]["duration"]
                 if duration_str.endswith("m"):
-                    rain_duration_minutes = int(
-                        duration_str[:-1])  # Removes 'm' and converts the remaining number to int
-                    rain_duration_seconds = rain_duration_minutes * 60
-                else:
-                    rain_duration_seconds = 0  # Default fallback in case there is no valid duration string
-            else:
-                rain_duration_seconds = 0  # Fallback to 0 if no valid duration is found
+                    rain_duration_seconds = int(duration_str[:-1]) * 60
 
         rain_duration_minutes = rain_duration_seconds // 60
         if rain_duration_minutes >= 60:
@@ -488,7 +491,7 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
                 value=f"**Type:** {rain_info.get('type', 'Unknown')} {WEATHER_STATES[rain_info.get('type', 'unknown').lower()].emoji}\n"
                       f"**ETA:** {time_in_display}\n"
                       f"**Duration:** {rain_info.get('duration', 'Unknown')}\n"
-                      f"**Time:** {rain_start_time.strftime('%H:%M')} - {rain_end_time.strftime('%H:%M')}\n",
+                      f"**Time:** {to_discord_timestamp(rain_start_time, 't')} - {to_discord_timestamp(rain_end_time, 't')}\n",
             )
 
         await ctx.send(embed=rain_embed)
@@ -549,7 +552,7 @@ async def weather(ctx) -> None:
 
         # Prepare the embed for weather information
         embed = discord.Embed(
-            title=f"Current Weather at {current_time.strftime('%H:%M')} UTC",
+            title=f"Current Weather at {to_discord_timestamp(current_time)}",
             color=discord.Color.orange()
         )
         embed.add_field(name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
@@ -638,7 +641,7 @@ async def refresh_weather(message):
         embed = message.embeds[0]
 
         # Update fields in the embed
-        embed.title = f"Current Weather at {current_time.strftime('%H:%M')} UTC"
+        embed.title = f"Current Weather at {to_discord_timestamp(current_time)}"
         embed.set_field_at(0, name="Weather", value=f"{weather_state.weather.name} {weather_state.weather.emoji}")
         embed.set_field_at(1, name=RAIN_ETA_LABEL, value=weather_state.rain_eta.str_eta)
 
@@ -691,7 +694,7 @@ async def rain(ctx):
         return
 
     rain_forecast_embed = discord.Embed(
-        title=f"🌧️ Next Rain Periods {datetime.now(dt_timezone.utc).strftime('%d-%m-%Y %H:%M %Z')}",
+        title=f"🌧️ Next Rain Periods {to_discord_timestamp(datetime.now(dt_timezone.utc), 'F')}",
         color=discord.Color.blue()
     )
 
@@ -717,8 +720,7 @@ async def rain(ctx):
             value=f"**Type:** {rain_info.get('type', 'Unknown')}\n"
                   f"**{RAIN_ETA_LABEL}:** {time_in_display}\n"
                   f"**Duration:** {rain_info.get('duration', 'Unknown')}\n"
-                  f"**Time:** {rain_start_time.strftime('%H:%M')} - "
-                  f"{rain_end_time.strftime('%H:%M')}\n",
+                  f"**Time:** {to_discord_timestamp(rain_start_time, 't')} - {to_discord_timestamp(rain_end_time, 't')}\n",
             inline=False
         )
 
