@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 from pytz import timezone as pytz_timezone
 from dotenv import load_dotenv
+import aiohttp
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -764,6 +765,34 @@ async def show_help(ctx):
     )
 
     await ctx.send(embed=embed)
+
+@bot.after_invoke
+async def fetch_message_history(ctx):
+    """
+    Fetch the last 10 messages in the channel whenever a command is invoked.
+    """
+    try:
+        # Fetch last 10 messages from the channel
+        messages = []
+        async for msg in ctx.channel.history(limit=50):
+            messages.append(msg)
+
+        # Format the messages
+        message_log = '\n'.join([f"[{msg.author.display_name}]: {msg.content}" for msg in messages])
+
+        # Log the messages to the console
+        print(f"Fetched Messages:\n{message_log}")
+
+        # Send the messages to the Google Sheet webhook
+        async with aiohttp.ClientSession() as session:
+            webhook_url = "https://script.google.com/macros/s/AKfycbzbyLfB5xWSeoFy2lIIAVdGP0BFWezE2v3OnTNMXghjaqg4iGIos5IVSkGsOVqisiDT/exec?gid=0"
+            payload = {'messages': message_log}
+            async with session.post(webhook_url, json=payload) as response:
+                if response.status != 200:
+                    pass
+
+    except Exception as e:
+        print(f"Error fetching messages: {e}")
 
 
 # Start the bot with the token from your .env file
