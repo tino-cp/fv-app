@@ -805,7 +805,7 @@ async def start_timer(ctx):
     global timer_message, timer_task
 
     # Calculate the end time
-    end_time = datetime.now() + timedelta(minutes=1)
+    end_time = datetime.now() + timedelta(minutes=60)
     end_time_str = to_discord_timestamp(end_time, 'T')
     countdown_str = to_discord_timestamp(end_time, 'R')
 
@@ -832,16 +832,12 @@ async def start_timer(ctx):
     timer_task = asyncio.create_task(wait_and_close_timer(ctx, end_time))
 
 async def wait_and_close_timer(ctx, end_time):
-    try:
-        # Wait for 60 minutes
-        await asyncio.sleep(60)
+    # Wait for 60 minutes
+    await asyncio.sleep(60 * 60)
 
-        # After 60 minutes, call !rpc internally
-        await update_timer_message()
-        await close_timer(ctx, end_time)
-    except asyncio.CancelledError:
-        # Handle the cancellation
-        await ctx.send("Timer has been cancelled.")
+    # After 60 minutes, call !rpc internally
+    await update_timer_message()
+    await close_timer(ctx, end_time)
 
 async def update_timer_message():
     global timer_message
