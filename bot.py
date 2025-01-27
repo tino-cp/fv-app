@@ -798,18 +798,10 @@ import asyncio
 
 # Global variable to store the timer message
 timer_message = None
-timer_active = False
 
 @bot.command(name='rpo', help='Start a 60-minute timer and display the status.')
 async def start_timer(ctx):
-    global timer_message, timer_active
-
-    if timer_active:
-        await ctx.send("A timer is already running!")
-        return
-
-    # Mark the timer as active
-    timer_active = True
+    global timer_message
 
     # Calculate the end time
     end_time = datetime.now() + timedelta(minutes=60)
@@ -866,11 +858,6 @@ async def update_timer_message():
         await timer_message.edit(embed=embed)
 
 async def close_timer(ctx, end_time):
-    global timer_active
-
-    # Mark the timer as inactive
-    timer_active = False
-
     # Create the embed message
     embed = discord.Embed(
         title="FIA",
