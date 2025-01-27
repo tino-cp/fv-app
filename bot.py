@@ -798,13 +798,14 @@ import asyncio
 
 # Global variable to store the timer message
 timer_message = None
+timer_task = None
 
 @bot.command(name='rpo', help='Start a 60-minute timer and display the status.')
 async def start_timer(ctx):
-    global timer_message
+    global timer_message, timer_task
 
     # Calculate the end time
-    end_time = datetime.now() + timedelta(minutes=60)
+    end_time = datetime.now() + timedelta(minutes=1)
     end_time_str = to_discord_timestamp(end_time, 'T')
     countdown_str = to_discord_timestamp(end_time, 'R')
 
@@ -827,13 +828,20 @@ async def start_timer(ctx):
     # Send the initial timer message
     timer_message = await ctx.send(embed=embed)
 
-    # Wait for 60 minutes
-    await asyncio.sleep(60 * 60)
+    # Start the timer task
+    timer_task = asyncio.create_task(wait_and_close_timer(ctx, end_time))
 
-    # After 60 minutes, call !rpc internally
-    await update_timer_message()
-    await close_timer(ctx, end_time)
+async def wait_and_close_timer(ctx, end_time):
+    try:
+        # Wait for 60 minutes
+        await asyncio.sleep(60)
 
+        # After 60 minutes, call !rpc internally
+        await update_timer_message()
+        await close_timer(ctx, end_time)
+    except asyncio.CancelledError:
+        # Handle the cancellation
+        await ctx.send("Timer has been cancelled.")
 
 async def update_timer_message():
     global timer_message
@@ -882,6 +890,16 @@ async def close_timer(ctx, end_time):
 
     # Send the closed timer message
     await ctx.send(embed=embed)
+
+@bot.command(name='cancel', help='Cancel the ongoing timer.')
+async def cancel_timer(ctx):
+    global timer_task, timer_message
+
+    if timer_task and not timer_task.done():
+        timer_task.cancel()
+        await ctx.send("Timer has been cancelled.")
+    else:
+        await ctx.send("No active timer to cancel.")
 
 
 # Start the bot with the token from your .env file
