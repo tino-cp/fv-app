@@ -806,7 +806,7 @@ async def start_timer(ctx):
 
     # Calculate the end time
     end_time = datetime.now() + timedelta(minutes=60)
-    end_time_str = to_discord_timestamp(end_time, 'T')
+    end_time_str = to_discord_timestamp(end_time, 't')
     countdown_str = to_discord_timestamp(end_time, 'R')
 
     # Create the embed message
@@ -878,7 +878,7 @@ async def close_timer(ctx, end_time):
             ":white_small_square: NFI - No evidence provided to the FIA\n"
             ":white_small_square: RI - Incident was judged by the stewards not worth a penalty\n"
             ":white_small_square: SSIR - Incident was self-served in race\n\n\n"
-            f"The submission window closed at {to_discord_timestamp(end_time, 'T')}"
+            f"The submission window closed at {to_discord_timestamp(end_time, 't')}"
         ),
         color=discord.Color.gold()
     )
