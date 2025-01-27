@@ -792,5 +792,110 @@ async def fetch_message_history(ctx):
         print(f"Error fetching messages: {e}")
 
 
+# TIMER BOT
+
+import asyncio
+
+# Global variable to store the timer message
+timer_message = None
+timer_active = False
+
+@bot.command(name='rpo', help='Start a 60-minute timer and display the status.')
+async def start_timer(ctx):
+    global timer_message, timer_active
+
+    if timer_active:
+        await ctx.send("A timer is already running!")
+        return
+
+    # Mark the timer as active
+    timer_active = True
+
+    # Calculate the end time
+    end_time = datetime.now() + timedelta(minutes=60)
+    end_time_str = to_discord_timestamp(end_time, 'T')
+    countdown_str = to_discord_timestamp(end_time, 'R')
+
+    # Create the embed message
+    embed = discord.Embed(
+        title="FIA",
+        description=(
+            "Penalty Submission window is now OPEN!\n\n"
+            ":white_small_square: Describe the incidents in the title\n"
+            ":white_small_square: Open the thread within the submission window\n"
+            ":white_small_square: @ all involved drivers\n"
+            ":white_small_square: Submit all evidence within 24h\n"
+            ":white_small_square: Leave the investigation to the FIA\n\n\n"
+            f"The submission window closes {countdown_str} at {end_time_str}"
+        ),
+        color=discord.Color.gold()
+    )
+    embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
+
+    # Send the initial timer message
+    timer_message = await ctx.send(embed=embed)
+
+    # Wait for 60 minutes
+    await asyncio.sleep(60 * 60)
+
+    # After 60 minutes, call !rpc internally
+    await update_timer_message()
+    await close_timer(ctx, end_time)
+
+
+async def update_timer_message():
+    global timer_message
+
+    if timer_message:
+        # Update the embed message to show the window is closed
+        embed = discord.Embed(
+            title="FIA",
+            description=(
+                "Penalty Submission window is now OPEN!\n\n"
+                ":white_small_square: Describe the incidents in the title\n"
+                ":white_small_square: Open the thread within the submission window\n"
+                ":white_small_square: @ all involved drivers\n"
+                ":white_small_square: Submit all evidence within 24h\n"
+                ":white_small_square: Leave the investigation to the FIA\n\n\n"
+            ),
+            color=discord.Color.gold()
+        )
+        embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
+
+        # Edit the original message
+        await timer_message.edit(embed=embed)
+
+async def close_timer(ctx, end_time):
+    global timer_active
+
+    # Mark the timer as inactive
+    timer_active = False
+
+    # Create the embed message
+    embed = discord.Embed(
+        title="FIA",
+        description=(
+            "Penalty Submission window is now CLOSED!\n\n"
+            "Abbreviations:\n"
+            ":white_small_square: TLW - Track limit warning (4th = penalty)\n"
+            ":white_small_square: LW - Lag warning (3rd = penalty)\n"
+            ":white_small_square: LI - Incident involving lag was judged by the stewards not worth a penalty\n"
+            ":white_small_square: REP - Reprimand (3rd = grid drop)\n"
+            ":white_small_square: Xs - Time penalty\n"
+            ":white_small_square: GD - Grid drop\n"
+            ":white_small_square: NFA - Evidence provided but not worthy for steward action\n"
+            ":white_small_square: NFI - No evidence provided to the FIA\n"
+            ":white_small_square: RI - Incident was judged by the stewards not worth a penalty\n"
+            ":white_small_square: SSIR - Incident was self-served in race\n\n\n"
+            f"The submission window closed at {to_discord_timestamp(end_time, 'T')}"
+        ),
+        color=discord.Color.gold()
+    )
+    embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
+
+    # Send the closed timer message
+    await ctx.send(embed=embed)
+
+
 # Start the bot with the token from your .env file
 bot.run(os.getenv('DISCORD_TOKEN'))

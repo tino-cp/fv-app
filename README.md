@@ -1,4 +1,4 @@
-# wheaterbot
+# formula v application
  
 This bot is designed for Discord servers and provides detailed weather forecasts and race weather predictions. 
 It integrates Grand Theft Auto V in-game weather mechanics, real-time forecasts, 
@@ -29,4 +29,9 @@ and supports Formula 1 and Formula 2 race schedules for the Formula V League.
   - Reaction-based updates 🔄.
   - Thumbnails and icons for enhanced readability 🖼️.
 
-*This project is my own implementation of [WeatherBot](https://github.com/nosv1/GTALens) by [nosv1](https://github.com/nosv1)*
+### ⏲️ Timer Functionality
+- **Start a 60-minute timer** with the `!rpo` command:
+  - Displays a countdown in an embed message.
+  - Automatically closes the window when the timer ends.
+    
+*This project uses implementation of [WeatherBot](https://github.com/nosv1/GTALens) by [nosv1](https://github.com/nosv1)*
