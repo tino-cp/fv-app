@@ -15,7 +15,8 @@ TEAMS_F1 = {
     "RedBull": "<:red:1275285685431177289>",
     "Williams": "<:wlms:844277423914745906>",
     "FIA Official": "<:fia:927351199387234386>",
-    "Spectator": "👀"
+    "Spectator": "👀",
+    "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
 TEAMS_F2 = {
@@ -31,7 +32,8 @@ TEAMS_F2 = {
     "Trident": "<:Trident:1272194719778213889>",
     "VaR": "<:var:1275285966894010419>",
     "FIA Official": "<:fia:927351199387234386>",
-    "Spectator": "👀"
+    "Spectator": "👀",
+    "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
 # This will store the user reactions by team (in memory, could be a database if you need persistence)
@@ -70,8 +72,8 @@ class RaceAttendance(commands.Cog):
 
         # Create the embed message
         embed = discord.Embed(
-            title="Race Attendance F1",
-            description="Click the button to confirm your participation in the race.",
+            title="<:FV1:1070246742693531688> Race Attendance F1 <:FV1:1070246742693531688>",
+            description='Click the button to confirm your participation. Main drivers, select your assigned team. Reserves without a team, join "Reserve Drivers Team"—a team will be assigned to you.',
             color=discord.Color.green()
         )
 
@@ -101,8 +103,8 @@ class RaceAttendance(commands.Cog):
 
         # Create the embed message
         embed = discord.Embed(
-            title="Race Attendance F2",
-            description="Click the button to confirm your participation in the race.",
+            title="<:FV2:1070247024588492901> Race Attendance F2 <:FV2:1070247024588492901>",
+            description='Click the button to confirm your participation. Main drivers, select your assigned team. Reserves without a team, join "Reserve Drivers Team"—a team will be assigned to you.',
             color=discord.Color.blue()
         )
 
@@ -177,7 +179,7 @@ class RaceAttendance(commands.Cog):
 
         # Clear existing fields and add updated team fields to the embed (inline)
         for team, emoji in teams.items():
-            driver_list = " ".join(team_drivers[team]) if team_drivers[team] else "No drivers yet"
+            driver_list = " | ".join(team_drivers[team]) if team_drivers[team] else "No drivers yet"
             embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
 
         # Recreate the view to prevent timeout issues
