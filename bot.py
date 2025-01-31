@@ -919,16 +919,17 @@ TEAMS_F1 = {
 }
 
 TEAMS_F2 = {
-    "Prema Racing": "🟢",
-    "Carlin": "🔵",
-    "Hitech Grand Prix": "🔴",
-    "ART Grand Prix": "🟠",
-    "MP Motorsport": "🔴",
-    "Charouz Racing System": "⚫",
-    "DAMS": "🟠",
-    "Virtuosi Racing": "⚪",
-    "Campos Racing": "🔵",
+    "Invicta": "🟢",
+    "MP": "🔵",
+    "Hitech": "🔴",
+    "Campos": "🟠",
+    "PREMA": "🔴",
+    "DAMS": "⚫",
+    "ART": "🟠",
+    "Rodin": "⚪",
+    "AIX": "🔵",
     "Trident": "🔵",
+    "VaR": "⭕",
     "FIA Official": "🟡",
     "Spectator": "👀"
 }
@@ -1044,8 +1045,8 @@ async def update_attendance_message(message, teams):
     message_content = f"**{event_type} Race Check-in**\n\n"
     message_content += "Please react with the emoji corresponding to your team:\n\n"
     message_content += "```\n"
-    message_content += "Team               | Drivers\n"
-    message_content += "-------------------|--------\n"
+    message_content += "Team                    Drivers\n"
+    message_content += "-------------------------------\n"
 
     # Add each team and its drivers to the table
     for team, emoji in teams.items():
