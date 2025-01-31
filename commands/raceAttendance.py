@@ -3,6 +3,38 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
+
+TEAMS_F1 = {
+    "Aston Martin": "🟢",
+    "Alpha Tauri": "🔵",
+    "Alfa Romeo": "🔴",
+    "Alpine": "🟠",
+    "Ferrari": "🔴",
+    "Haas": "⚫",
+    "McLaren": "🟠",
+    "Mercedes": "⚪",
+    "RedBull": "🔵",
+    "Williams": "🔵",
+    "FIA Official": "🟡",
+    "Spectator": "👀"
+}
+
+TEAMS_F2 = {
+    "Invicta": "🟢",
+    "MP": "🔵",
+    "Hitech": "🔴",
+    "Campos": "🟠",
+    "PREMA": "🔴",
+    "DAMS": "⚫",
+    "ART": "🟠",
+    "Rodin": "⚪",
+    "AIX": "🔵",
+    "Trident": "🔵",
+    "VaR": "⭕",
+    "FIA Official": "🟡",
+    "Spectator": "👀"
+}
+'''
 TEAMS_F1 = {
     "Aston Martin": "<:ast:1274844727757246586>",
     "RCB": "<:rcb:1234603336162869320>",
@@ -33,7 +65,7 @@ TEAMS_F2 = {
     "FIA Official": "<:fia:927351199387234386>",
     "Spectator": "👀"
 }
-
+'''
 # This will store the user reactions by team (in memory, could be a database if you need persistence)
 team_drivers_f1 = {team: [] for team in TEAMS_F1}
 team_drivers_f2 = {team: [] for team in TEAMS_F2}
@@ -159,7 +191,6 @@ class RaceAttendance(commands.Cog):
         # Clear existing fields and add updated team fields to the embed (inline)
         for team, emoji in teams.items():
             driver_list = " ".join(team_drivers[team]) if team_drivers[team] else "No drivers yet"
-            print(f"Adding field for {team} {emoji}: {driver_list}")
             embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
 
         # Update the message with the new embed
