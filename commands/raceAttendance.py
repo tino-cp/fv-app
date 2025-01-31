@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
+
 '''
 TEAMS_F1 = {
     "Aston Martin": "🟢",
@@ -35,6 +36,7 @@ TEAMS_F2 = {
     "Spectator": "👀"
 }
 '''
+
 TEAMS_F1 = {
     "Aston Martin": "<:ast:1274844727757246586>",
     "RCB": "<:rcb:1234603336162869320>",
@@ -78,7 +80,10 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
-        global last_message_f1  # Access the global variable for the last F1 message
+        global last_message_f1, team_drivers_f1  # Access the global variables
+
+        # Reset the driver lists for all teams
+        team_drivers_f1 = {team: [] for team in TEAMS_F1}
 
         # If there was a previous attendance message, delete it
         if last_message_f1:
@@ -109,7 +114,10 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RAF2")
     async def race_attendance_f2(self, ctx):
-        global last_message_f2  # Access the global variable for the last F2 message
+        global last_message_f2, team_drivers_f2  # Access the global variables
+
+        # Reset the driver lists for all teams
+        team_drivers_f2 = {team: [] for team in TEAMS_F2}
 
         # If there was a previous attendance message, delete it
         if last_message_f2:
