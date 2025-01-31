@@ -1036,32 +1036,28 @@ async def on_reaction_remove(reaction, user):
 
 async def update_attendance_message(message, teams):
     """
-    Updates the attendance message with the latest data in a table format.
+    Updates the attendance message with the latest data in an embed format.
     """
     data = attendance_data[message.id]
 
-    # Create the table header
-    event_type = data["event_type"]
-    message_content = f"**{event_type} Race Check-in**\n\n"
-    message_content += "Please react with the emoji corresponding to your team:\n\n"
-    message_content += "```\n"
-    message_content += "Team                    Drivers\n"
-    message_content += "-------------------------------\n"
+    # Create the embed
+    embed = discord.Embed(
+        title=f"{data['event_type']} Race Check-in",
+        description="Please react with the emoji corresponding to your team:",
+        color=discord.Color.blue()  # You can change the color as needed
+    )
 
-    # Add each team and its drivers to the table
+    # Add each team and its drivers to the embed
     for team, emoji in teams.items():
-        team_line = f"{emoji} {team.ljust(17)}| "
-        if data["teams"][team]:
-            team_line += ", ".join(data["teams"][team])
-        else:
-            team_line += "No drivers yet"
-        message_content += team_line + "\n"
+        drivers = ", ".join(data["teams"][team]) if data["teams"][team] else "No drivers yet"
+        embed.add_field(
+            name=f"{emoji} {team}",
+            value=drivers,
+            inline=False  # Set to True if you want fields to appear side by side
+        )
 
-    # Close the code block
-    message_content += "```"
-
-    # Edit the message with the updated content
-    await message.edit(content=message_content)
+    # Edit the message with the updated embed
+    await message.edit(embed=embed)
 
 
 # Start the bot with the token from your .env file
