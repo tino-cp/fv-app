@@ -4,33 +4,33 @@ from discord.ui import Button, View
 
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
 TEAMS_F1 = {
-    "Aston Martin": "🟢",
-    "Alpha Tauri": "🚩",
-    "Alfa Romeo": "⭕",
-    "Alpine": "🏳️",
-    "Ferrari": "🔴",
-    "Haas": "⚫",
-    "McLaren": "🟠",
-    "Mercedes": "⚪",
-    "RedBull": "⛳",
-    "Williams": "🔵",
-    "FIA Official": "🟡",
+    "Aston Martin": "<:ast:1274844727757246586>",
+    "RCB": "<:rcb:1234603336162869320>",
+    "Sauber": "<:sau:1234528088222597131>",
+    "Alpine": "<:alp:844275251440910387>",
+    "Ferrari": "<:fer:1233936232409468958>",
+    "Haas": "<:haas:1039894365994221568>",
+    "McLaren": "<:mcl:980541416591724644>",
+    "Mercedes": "<:merc:844262871071195147>",
+    "RedBull": "<:red:1275285685431177289>",
+    "Williams": "<:wlms:844277423914745906>",
+    "FIA Official": "<:fia:927351199387234386>",
     "Spectator": "👀"
 }
 
 TEAMS_F2 = {
-    "Invicta": "🟢",
-    "MP": "🔵",
-    "Hitech": "🔴",
-    "Campos": "🟠",
-    "PREMA": "🔴",
-    "DAMS": "⚫",
-    "ART": "🟠",
-    "Rodin": "⚪",
-    "AIX": "🔵",
-    "Trident": "🔵",
-    "VaR": "⭕",
-    "FIA Official": "🟡",
+    "Invicta": "<:invicta:1275285922266742926>",
+    "MP": "<:mp:1275285923785080946>",
+    "Hitech": "<:hitech:1275285920639221807>",
+    "Campos": "<:campos:1275285917187178539>",
+    "PREMA": "<:prema:1275285925206818836>",
+    "DAMS": "<:dams:1275285918743265362>",
+    "ART": "<:ART:1275285915366985788>",
+    "Rodin": "<:rodin:1275285926792400926>",
+    "AIX": "<:aix:1275285913685065759>",
+    "Trident": "<:Trident:1272194719778213889>",
+    "VaR": "<:var:1275285966894010419>",
+    "FIA Official": "<:fia:927351199387234386>",
     "Spectator": "👀"
 }
 
