@@ -78,7 +78,16 @@ class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def has_fia_role(ctx):
+        # Check if the user has the @FIA role
+        fia_role = discord.utils.get(ctx.guild.roles, name="FIA")
+        if fia_role in ctx.author.roles:
+            return True
+        await ctx.send("You do not have permission to use this command.")
+        return False
+
     @commands.command(name="RAF1")
+    @commands.check(has_fia_role)  # Restrict command to users with the @FIA role
     async def race_attendance_f1(self, ctx):
         global last_message_f1, team_drivers_f1  # Access the global variables
 
@@ -113,6 +122,7 @@ class RaceAttendance(commands.Cog):
         last_message_f1 = message
 
     @commands.command(name="RAF2")
+    @commands.check(has_fia_role)  # Restrict command to users with the @FIA role
     async def race_attendance_f2(self, ctx):
         global last_message_f2, team_drivers_f2  # Access the global variables
 
