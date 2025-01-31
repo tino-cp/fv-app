@@ -24,6 +24,7 @@ from commands.weather import weather, rain
 from commands.race import race
 from commands.penalty import start_timer, cancel_timer, pen_command, pen_summary, protest_command, PenaltyCog
 from commands.help import show_help
+from commands.raceAttendance import setup as setup_attendance
 
 bot.add_command(weather)
 bot.add_command(rain)
@@ -35,10 +36,12 @@ bot.add_command(pen_command)
 bot.add_command(pen_summary)
 bot.add_command(protest_command)
 
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     await bot.add_cog(PenaltyCog(bot))
+    await setup_attendance(bot)
 
 
 # Start the bot with the token from your .env file

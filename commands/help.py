@@ -29,7 +29,9 @@ async def show_help(ctx):
             "- Get the current weather conditions for the location.\n"
             "---\n"
             "`!rain`\n"
-            "- Shows 5 periods of upcoming rain forecasts at your location."
+            "- Shows 5 periods of upcoming rain forecasts at your location.\n"
+            "`!RAF1 or !RAF2`\n"
+            "Creates an attendance form for the specified League"
         ),
         inline=False
     )
