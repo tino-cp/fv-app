@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
-
+'''
 TEAMS_F1 = {
     "Aston Martin": "🟢",
     "Alpha Tauri": "🔵",
@@ -65,7 +65,7 @@ TEAMS_F2 = {
     "FIA Official": "<:fia:927351199387234386>",
     "Spectator": "👀"
 }
-'''
+
 # This will store the user reactions by team (in memory, could be a database if you need persistence)
 team_drivers_f1 = {team: [] for team in TEAMS_F1}
 team_drivers_f2 = {team: [] for team in TEAMS_F2}
