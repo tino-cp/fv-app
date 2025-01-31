@@ -1,21 +1,18 @@
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
 
-# ATTENDANCE BOT COMMAND
-
-attendance_data = {}
-
-
+# The dictionary of teams and the corresponding emoji for each (add more as needed)
 TEAMS_F1 = {
     "Aston Martin": "🟢",
-    "Alpha Tauri": "🔵",
-    "Alfa Romeo": "🔴",
-    "Alpine": "🟠",
+    "Alpha Tauri": "🚩",
+    "Alfa Romeo": "⭕",
+    "Alpine": "🏳️",
     "Ferrari": "🔴",
     "Haas": "⚫",
     "McLaren": "🟠",
     "Mercedes": "⚪",
-    "RedBull": "🔵",
+    "RedBull": "⛳",
     "Williams": "🔵",
     "FIA Official": "🟡",
     "Spectator": "👀"
@@ -36,175 +33,137 @@ TEAMS_F2 = {
     "FIA Official": "🟡",
     "Spectator": "👀"
 }
-'''
 
-TEAMS_F1 = {
-    "Aston Martin": "<:ast:1274844727757246586>",
-    "RCB": "<:rcb:1234603336162869320>",
-    "Sauber": "<:sau:1234528088222597131>",
-    "Alpine": "<:alp:844275251440910387>",
-    "Ferrari": "<:fer:1233936232409468958>",
-    "Haas": "<:haas:1039894365994221568>",
-    "McLaren": "<:mcl:980541416591724644>",
-    "Mercedes": "<:merc:844262871071195147>",
-    "RedBull": "<:red:1275285685431177289>",
-    "Williams": "<:wlms:844277423914745906>",
-    "FIA Official": "<:fia:927351199387234386>",
-    "Spectator": "👀"
-}
+# This will store the user reactions by team (in memory, could be a database if you need persistence)
+team_drivers_f1 = {team: [] for team in TEAMS_F1}
+team_drivers_f2 = {team: [] for team in TEAMS_F2}
+last_message_f1 = None  # To store the last F1 race attendance message
+last_message_f2 = None  # To store the last F2 race attendance message
 
-TEAMS_F2 = {
-    "Invicta": "<:invicta:1275285922266742926>",
-    "MP": "<:mp:1275285923785080946>",
-    "Hitech": "<:hitech:1275285920639221807>",
-    "Campos": "<:campos:1275285917187178539>",
-    "PREMA": "<:prema:1275285925206818836>",
-    "DAMS": "<:dams:1275285918743265362>",
-    "ART": "<:ART:1275285915366985788>",
-    "Rodin": "<:rodin:1275285926792400926>",
-    "AIX": "<:aix:1275285913685065759>",
-    "Trident": "<:Trident:1272194719778213889>",
-    "VaR": "<:var:1275285966894010419>",
-    "FIA Official": "<:fia:927351199387234386>",
-    "Spectator": "👀"
-}
-'''
-# Global variable to store the previous attendance message ID
-previous_attendance_message_id = None
-
-class RaceAttendanceCog(commands.Cog):
+class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
-        """
-        Sends a message for F1 race attendance.
-        """
-        await send_race_attendance(ctx, TEAMS_F1, "Formula 1")
+        global last_message_f1  # Access the global variable for the last F1 message
+
+        # If there was a previous attendance message, delete it
+        if last_message_f1:
+            await last_message_f1.delete()
+
+        # Create a view with buttons for each team
+        view = View()
+        for team, emoji in TEAMS_F1.items():
+            button = Button(style=discord.ButtonStyle.primary, label=team, emoji=emoji, custom_id=f"F1_{team}")
+            button.callback = self.button_callback
+            view.add_item(button)
+
+        # Create the embed message
+        embed = discord.Embed(
+            title="Race Attendance F1",
+            description="Click the button to confirm your participation in the race.",
+            color=discord.Color.green()
+        )
+
+        # Add the team fields to the embed (inline)
+        for team, emoji in TEAMS_F1.items():
+            driver_list = "\n".join(team_drivers_f1[team]) if team_drivers_f1[team] else "No drivers yet"
+            embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
+
+        # Send the message with the buttons and store it as the last message
+        message = await ctx.send(embed=embed, view=view)
+        last_message_f1 = message
 
     @commands.command(name="RAF2")
     async def race_attendance_f2(self, ctx):
-        """
-        Sends a message for F2 race attendance.
-        """
-        await send_race_attendance(ctx, TEAMS_F2, "Formula 2")
+        global last_message_f2  # Access the global variable for the last F2 message
 
-@commands.Cog.listener()
-async def on_raw_reaction_remove(self, payload):
-    if payload.user_id == self.bot.user.id:
-        return  # Ignore bot's own reactions
+        # If there was a previous attendance message, delete it
+        if last_message_f2:
+            await last_message_f2.delete()
 
-    guild = self.bot.get_guild(payload.guild_id)
-    user = None
+        # Create a view with buttons for each team
+        view = View()
+        for team, emoji in TEAMS_F2.items():
+            button = Button(style=discord.ButtonStyle.primary, label=team, emoji=emoji, custom_id=f"F2_{team}")
+            button.callback = self.button_callback
+            view.add_item(button)
 
-    if guild:
-        user = guild.get_member(payload.user_id)
-
-    # Fallback in case the user is not cached (large server issue)
-    if user is None:
-        try:
-            user = await self.bot.fetch_user(payload.user_id)
-        except discord.NotFound:
-            print(f"User {payload.user_id} not found.")
-            return
-        except discord.HTTPException as e:
-            print(f"Failed to fetch user {payload.user_id}: {e}")
-            return
-
-    if payload.message_id not in attendance_data:
-        return
-
-    event_type = attendance_data[payload.message_id]["event_type"]
-    teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
-
-    for team, emoji in teams.items():
-        if str(payload.emoji.name) == emoji:
-            user_name = user.name  # Use `.name` instead of `.display_name` for consistency
-            if user_name in attendance_data[payload.message_id]["teams"][team]:
-                attendance_data[payload.message_id]["teams"][team].remove(user_name)
-            break  # Exit loop early if we find a match
-
-    # Fetch the channel and message, handle permission errors
-    channel = self.bot.get_channel(payload.channel_id)
-    if channel:
-        try:
-            message = await channel.fetch_message(payload.message_id)
-            await update_attendance_message(message, teams)
-        except discord.NotFound:
-            print(f"Message {payload.message_id} not found.")
-        except discord.Forbidden:
-            print("Bot does not have permission to fetch messages.")
-        except discord.HTTPException as e:
-            print(f"Failed to fetch message {payload.message_id}: {e}")
-
-
-async def send_race_attendance(ctx, teams, event_type):
-    """
-    Sends a message for race attendance and handles reactions.
-    Deletes the previous attendance message if it exists.
-    """
-    global previous_attendance_message_id
-
-    # Delete the previous attendance message if it exists
-    if previous_attendance_message_id:
-        try:
-            previous_message = await ctx.channel.fetch_message(previous_attendance_message_id)
-            await previous_message.delete()
-        except discord.NotFound:
-            print("Previous attendance message not found. It may have been deleted manually.")
-        except discord.Forbidden:
-            print("Bot does not have permission to delete the previous message.")
-        except Exception as e:
-            print(f"Error deleting previous message: {e}")
-
-    # Create the initial attendance message
-    message_content = f"**{event_type} Race Check-in**\n\n"
-    message_content += "Please react with the emoji corresponding to your team:\n\n"
-
-    # Send the message
-    message = await ctx.send(message_content)
-
-    # Add reactions for each team
-    for emoji in teams.values():
-        await message.add_reaction(emoji)
-
-    # Store the message ID, initialize attendance data, and store the event type
-    attendance_data[message.id] = {
-        "teams": {team: [] for team in teams},
-        "event_type": event_type
-    }
-
-    # Update the message to show the table format immediately
-    await update_attendance_message(message, teams)
-
-    # Update the global variable with the new message ID
-    previous_attendance_message_id = message.id
-
-async def update_attendance_message(message, teams):
-    """
-    Updates the attendance message with the latest data in an embed format.
-    """
-    data = attendance_data[message.id]
-
-    # Create the embed
-    embed = discord.Embed(
-        title=f"{data['event_type']} Race Check-in",
-        description="Please react with the emoji corresponding to your team:",
-        color=discord.Color.blue()  # You can change the color as needed
-    )
-
-    # Add each team and its drivers to the embed
-    for team, emoji in teams.items():
-        drivers = ", ".join(data["teams"][team]) if data["teams"][team] else "No drivers yet"
-        embed.add_field(
-            name=f"{emoji} {team}",
-            value=drivers,
-            inline=False  # Set to True if you want fields to appear side by side
+        # Create the embed message
+        embed = discord.Embed(
+            title="Race Attendance F2",
+            description="Click the button to confirm your participation in the race.",
+            color=discord.Color.blue()
         )
 
-    # Edit the message with the updated embed
-    await message.edit(embed=embed)
+        # Add the team fields to the embed (inline)
+        for team, emoji in TEAMS_F2.items():
+            driver_list = "\n".join(team_drivers_f2[team]) if team_drivers_f2[team] else "No drivers yet"
+            embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
 
-async def setup(bot):
-    await bot.add_cog(RaceAttendanceCog(bot))
+        # Send the message with the buttons and store it as the last message
+        message = await ctx.send(embed=embed, view=view)
+        last_message_f2 = message
+
+    async def button_callback(self, interaction: discord.Interaction):
+        user = interaction.user
+        custom_id = interaction.data["custom_id"]
+        category, team = custom_id.split("_", 1)  # Split into F1/F2 and team name
+
+        # Determine which team list to update
+        if category == "F1":
+            team_drivers = team_drivers_f1
+        elif category == "F2":
+            team_drivers = team_drivers_f2
+        else:
+            return  # Invalid category
+
+        # Get the user's nickname (or username if no nickname is set)
+        nickname = user.nick or user.name
+
+        # Toggle user participation
+        if nickname in team_drivers[team]:
+            team_drivers[team].remove(nickname)
+            print(f"Driver {nickname} removed from {team} ({category})")
+        else:
+            team_drivers[team].append(nickname)
+            print(f"Driver {nickname} added to {team} ({category})")
+
+        # Update the message to show the new drivers
+        await self.update_race_attendance_message(interaction.message, category)
+        await interaction.response.defer()
+
+    async def update_race_attendance_message(self, message, category):
+        # Determine which team list and teams to use
+        if category == "F1":
+            teams = TEAMS_F1
+            team_drivers = team_drivers_f1
+            title = "Race Attendance F1"
+            color = discord.Color.green()
+        elif category == "F2":
+            teams = TEAMS_F2
+            team_drivers = team_drivers_f2
+            title = "Race Attendance F2"
+            color = discord.Color.blue()
+        else:
+            return  # Invalid category
+
+        # Create a new embed
+        embed = discord.Embed(
+            title=title,
+            description="Click the button to confirm your participation in the race.",
+            color=color
+        )
+
+        # Clear existing fields and add updated team fields to the embed (inline)
+        for team, emoji in teams.items():
+            driver_list = " ".join(team_drivers[team]) if team_drivers[team] else "No drivers yet"
+            print(f"Adding field for {team} {emoji}: {driver_list}")
+            embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
+
+        # Update the message with the new embed
+        await message.edit(embed=embed)
+
+def setup(bot):
+    bot.add_cog(RaceAttendance(bot))
