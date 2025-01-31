@@ -1,42 +1,8 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ui import Button, View
 
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
-
-'''
-TEAMS_F1 = {
-    "Aston Martin": "🟢",
-    "Alpha Tauri": "🔵",
-    "Alfa Romeo": "🔴",
-    "Alpine": "🟠",
-    "Ferrari": "🔴",
-    "Haas": "⚫",
-    "McLaren": "🟠",
-    "Mercedes": "⚪",
-    "RedBull": "🔵",
-    "Williams": "🔵",
-    "FIA Official": "🟡",
-    "Spectator": "👀"
-}
-
-TEAMS_F2 = {
-    "Invicta": "🟢",
-    "MP": "🔵",
-    "Hitech": "🔴",
-    "Campos": "🟠",
-    "PREMA": "🔴",
-    "DAMS": "⚫",
-    "ART": "🟠",
-    "Rodin": "⚪",
-    "AIX": "🔵",
-    "Trident": "🔵",
-    "VaR": "⭕",
-    "FIA Official": "🟡",
-    "Spectator": "👀"
-}
-'''
-
 TEAMS_F1 = {
     "Aston Martin": "<:ast:1274844727757246586>",
     "RCB": "<:rcb:1234603336162869320>",
@@ -77,6 +43,7 @@ last_message_f2 = None  # To store the last F2 race attendance message
 class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.refresh_views.start()  # Start the background task
 
     async def has_fia_role(ctx):
         # Check if the user has the @FIA role
@@ -99,11 +66,7 @@ class RaceAttendance(commands.Cog):
             await last_message_f1.delete()
 
         # Create a view with buttons for each team
-        view = View()
-        for team, emoji in TEAMS_F1.items():
-            button = Button(style=discord.ButtonStyle.primary, label=team, emoji=emoji, custom_id=f"F1_{team}")
-            button.callback = self.button_callback
-            view.add_item(button)
+        view = self.create_view("F1")
 
         # Create the embed message
         embed = discord.Embed(
@@ -134,11 +97,7 @@ class RaceAttendance(commands.Cog):
             await last_message_f2.delete()
 
         # Create a view with buttons for each team
-        view = View()
-        for team, emoji in TEAMS_F2.items():
-            button = Button(style=discord.ButtonStyle.primary, label=team, emoji=emoji, custom_id=f"F2_{team}")
-            button.callback = self.button_callback
-            view.add_item(button)
+        view = self.create_view("F2")
 
         # Create the embed message
         embed = discord.Embed(
@@ -155,6 +114,16 @@ class RaceAttendance(commands.Cog):
         # Send the message with the buttons and store it as the last message
         message = await ctx.send(embed=embed, view=view)
         last_message_f2 = message
+
+    def create_view(self, category):
+        # Create a view with buttons for each team
+        view = View(timeout=None)  # Set timeout to None to prevent the view from timing out
+        teams = TEAMS_F1 if category == "F1" else TEAMS_F2
+        for team, emoji in teams.items():
+            button = Button(style=discord.ButtonStyle.primary, label=team, emoji=emoji, custom_id=f"{category}_{team}")
+            button.callback = self.button_callback
+            view.add_item(button)
+        return view
 
     async def button_callback(self, interaction: discord.Interaction):
         user = interaction.user
@@ -211,8 +180,25 @@ class RaceAttendance(commands.Cog):
             driver_list = " ".join(team_drivers[team]) if team_drivers[team] else "No drivers yet"
             embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
 
-        # Update the message with the new embed
-        await message.edit(embed=embed)
+        # Recreate the view to prevent timeout issues
+        view = self.create_view(category)
+
+        # Update the message with the new embed and view
+        await message.edit(embed=embed, view=view)
+
+    @tasks.loop(minutes=14)  # Run every 14 minutes to stay under the 15-minute timeout
+    async def refresh_views(self):
+        # Refresh the F1 message
+        if last_message_f1:
+            await self.update_race_attendance_message(last_message_f1, "F1")
+
+        # Refresh the F2 message
+        if last_message_f2:
+            await self.update_race_attendance_message(last_message_f2, "F2")
+
+    @refresh_views.before_loop
+    async def before_refresh_views(self):
+        await self.bot.wait_until_ready()  # Wait until the bot is ready
 
 def setup(bot):
     bot.add_cog(RaceAttendance(bot))
