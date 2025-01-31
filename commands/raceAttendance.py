@@ -90,64 +90,54 @@ class RaceAttendanceCog(commands.Cog):
         """
         await send_race_attendance(ctx, TEAMS_F2, "Formula 2")
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user.bot:
+@commands.Cog.listener()
+async def on_raw_reaction_remove(self, payload):
+    if payload.user_id == self.bot.user.id:
+        return  # Ignore bot's own reactions
+
+    guild = self.bot.get_guild(payload.guild_id)
+    user = None
+
+    if guild:
+        user = guild.get_member(payload.user_id)
+
+    # Fallback in case the user is not cached (large server issue)
+    if user is None:
+        try:
+            user = await self.bot.fetch_user(payload.user_id)
+        except discord.NotFound:
+            print(f"User {payload.user_id} not found.")
+            return
+        except discord.HTTPException as e:
+            print(f"Failed to fetch user {payload.user_id}: {e}")
             return
 
-        if reaction.message.id not in attendance_data:
-            return
+    if payload.message_id not in attendance_data:
+        return
 
-        # Get the event type (F1 or F2) from the attendance data
-        event_type = attendance_data[reaction.message.id]["event_type"]
-        teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
+    event_type = attendance_data[payload.message_id]["event_type"]
+    teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
 
-        for team, emoji in teams.items():
-            if str(reaction.emoji) == emoji:
-                user_name = user.display_name  # Use the user's display name
-                if user_name not in attendance_data[reaction.message.id]["teams"][team]:
-                    attendance_data[reaction.message.id]["teams"][team].append(user_name)
-                break
+    for team, emoji in teams.items():
+        if str(payload.emoji.name) == emoji:
+            user_name = user.name  # Use `.name` instead of `.display_name` for consistency
+            if user_name in attendance_data[payload.message_id]["teams"][team]:
+                attendance_data[payload.message_id]["teams"][team].remove(user_name)
+            break  # Exit loop early if we find a match
 
-        await update_attendance_message(reaction.message, teams)
+    # Fetch the channel and message, handle permission errors
+    channel = self.bot.get_channel(payload.channel_id)
+    if channel:
+        try:
+            message = await channel.fetch_message(payload.message_id)
+            await update_attendance_message(message, teams)
+        except discord.NotFound:
+            print(f"Message {payload.message_id} not found.")
+        except discord.Forbidden:
+            print("Bot does not have permission to fetch messages.")
+        except discord.HTTPException as e:
+            print(f"Failed to fetch message {payload.message_id}: {e}")
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload):
-        if payload.user_id == self.bot.user.id:
-            return  # Ignore bot's own reactions
-
-        guild = self.bot.get_guild(payload.guild_id)
-        user = guild.get_member(payload.user_id) if guild else None
-
-        if user is None:  # Fetch the user if not cached
-            try:
-                user = await self.bot.fetch_user(payload.user_id)
-            except discord.NotFound:
-                print(f"User {payload.user_id} not found.")
-                return
-
-        if payload.message_id not in attendance_data:
-            return
-
-        event_type = attendance_data[payload.message_id]["event_type"]
-        teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
-
-        for team, emoji in teams.items():
-            if str(payload.emoji.name) == emoji:
-                user_name = user.display_name
-                if user_name in attendance_data[payload.message_id]["teams"][team]:
-                    attendance_data[payload.message_id]["teams"][team].remove(user_name)
-                break
-
-        channel = self.bot.get_channel(payload.channel_id)
-        if channel:
-            try:
-                message = await channel.fetch_message(payload.message_id)
-                await update_attendance_message(message, teams)
-            except discord.NotFound:
-                print(f"Message {payload.message_id} not found.")
-            except discord.Forbidden:
-                print("Bot does not have permission to fetch messages.")
 
 async def send_race_attendance(ctx, teams, event_type):
     """
