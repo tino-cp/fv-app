@@ -903,7 +903,7 @@ async def cancel_timer(ctx):
 #ATTENDANCE BOT COMMAND
 
 attendance_data = {}
-TEAMS = {
+TEAMS_F1 = {
     "Aston Martin": "🟢",
     "Alpha Tauri": "🔵",
     "Alfa Romeo": "🔴",
@@ -918,10 +918,24 @@ TEAMS = {
     "Spectator": "👀"
 }
 
-previous_attendance_message_id = None
+TEAMS_F2 = {
+    "Prema Racing": "🟢",
+    "Carlin": "🔵",
+    "Hitech Grand Prix": "🔴",
+    "ART Grand Prix": "🟠",
+    "MP Motorsport": "🔴",
+    "Charouz Racing System": "⚫",
+    "DAMS": "🟠",
+    "Virtuosi Racing": "⚪",
+    "Campos Racing": "🔵",
+    "Trident": "🔵",
+    "FIA Official": "🟡",
+    "Spectator": "👀"
+}
 
-@bot.command(name="RA")
-async def race_attendance(ctx):
+# Global variable to store the previous attendance message ID
+previous_attendance_message_id = None
+async def send_race_attendance(ctx, teams, event_type):
     """
     Sends a message for race attendance and handles reactions.
     Deletes the previous attendance message if it exists.
@@ -941,24 +955,41 @@ async def race_attendance(ctx):
             print(f"Error deleting previous message: {e}")
 
     # Create the initial attendance message
-    message_content = "**Formula 1 Race Check-in**\n\n"
+    message_content = f"**{event_type} Race Check-in**\n\n"
     message_content += "Please react with the emoji corresponding to your team:\n\n"
 
     # Send the message
     message = await ctx.send(message_content)
 
     # Add reactions for each team
-    for emoji in TEAMS.values():
+    for emoji in teams.values():
         await message.add_reaction(emoji)
 
-    # Store the message ID and initialize attendance data
-    attendance_data[message.id] = {"teams": {team: [] for team in TEAMS}}
+    # Store the message ID, initialize attendance data, and store the event type
+    attendance_data[message.id] = {
+        "teams": {team: [] for team in teams},
+        "event_type": event_type
+    }
 
     # Update the message to show the table format immediately
-    await update_attendance_message(message)
+    await update_attendance_message(message, teams)
 
     # Update the global variable with the new message ID
     previous_attendance_message_id = message.id
+
+@bot.command(name="RAF1")
+async def race_attendance_f1(ctx):
+    """
+    Sends a message for F1 race attendance.
+    """
+    await send_race_attendance(ctx, TEAMS_F1, "Formula 1")
+
+@bot.command(name="RAF2")
+async def race_attendance_f2(ctx):
+    """
+    Sends a message for F2 race attendance.
+    """
+    await send_race_attendance(ctx, TEAMS_F2, "Formula 2")
 
 @bot.event
 async def on_reaction_add(reaction, user):
@@ -968,14 +999,18 @@ async def on_reaction_add(reaction, user):
     if reaction.message.id not in attendance_data:
         return
 
-    for team, emoji in TEAMS.items():
+    # Get the event type (F1 or F2) from the attendance data
+    event_type = attendance_data[reaction.message.id]["event_type"]
+    teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
+
+    for team, emoji in teams.items():
         if str(reaction.emoji) == emoji:
-            user_tag = f"<@{user.id}>"
-            if user_tag not in attendance_data[reaction.message.id]["teams"][team]:
-                attendance_data[reaction.message.id]["teams"][team].append(user_tag)
+            user_name = user.display_name  # Use the user's display name
+            if user_name not in attendance_data[reaction.message.id]["teams"][team]:
+                attendance_data[reaction.message.id]["teams"][team].append(user_name)
             break
 
-    await update_attendance_message(reaction.message)
+    await update_attendance_message(reaction.message, teams)
 
 @bot.event
 async def on_reaction_remove(reaction, user):
@@ -985,30 +1020,35 @@ async def on_reaction_remove(reaction, user):
     if reaction.message.id not in attendance_data:
         return
 
-    for team, emoji in TEAMS.items():
+    # Get the event type (F1 or F2) from the attendance data
+    event_type = attendance_data[reaction.message.id]["event_type"]
+    teams = TEAMS_F1 if event_type == "Formula 1" else TEAMS_F2
+
+    for team, emoji in teams.items():
         if str(reaction.emoji) == emoji:
-            user_tag = f"<@{user.id}>"
-            if user_tag in attendance_data[reaction.message.id]["teams"][team]:
-                attendance_data[reaction.message.id]["teams"][team].remove(user_tag)
+            user_name = user.display_name  # Use the user's display name
+            if user_name in attendance_data[reaction.message.id]["teams"][team]:
+                attendance_data[reaction.message.id]["teams"][team].remove(user_name)
             break
 
-    await update_attendance_message(reaction.message)
+    await update_attendance_message(reaction.message, teams)
 
-async def update_attendance_message(message):
+async def update_attendance_message(message, teams):
     """
     Updates the attendance message with the latest data in a table format.
     """
     data = attendance_data[message.id]
 
     # Create the table header
-    message_content = "**Formula 1 Race Check-in**\n\n"
+    event_type = data["event_type"]
+    message_content = f"**{event_type} Race Check-in**\n\n"
     message_content += "Please react with the emoji corresponding to your team:\n\n"
     message_content += "```\n"
-    message_content += "Team                      Drivers\n"
-    message_content += "---------------------------------\n"
+    message_content += "Team               | Drivers\n"
+    message_content += "-------------------|--------\n"
 
     # Add each team and its drivers to the table
-    for team, emoji in TEAMS.items():
+    for team, emoji in teams.items():
         team_line = f"{emoji} {team.ljust(17)}| "
         if data["teams"][team]:
             team_line += ", ".join(data["teams"][team])
@@ -1021,40 +1061,6 @@ async def update_attendance_message(message):
 
     # Edit the message with the updated content
     await message.edit(content=message_content)
-
-@bot.event
-async def on_reaction_add(reaction, user):
-    if user.bot:
-        return
-
-    if reaction.message.id not in attendance_data:
-        return
-
-    for team, emoji in TEAMS.items():
-        if str(reaction.emoji) == emoji:
-            user_name = user.display_name  # Use the user's display name
-            if user_name not in attendance_data[reaction.message.id]["teams"][team]:
-                attendance_data[reaction.message.id]["teams"][team].append(user_name)
-            break
-
-    await update_attendance_message(reaction.message)
-
-@bot.event
-async def on_reaction_remove(reaction, user):
-    if user.bot:
-        return
-
-    if reaction.message.id not in attendance_data:
-        return
-
-    for team, emoji in TEAMS.items():
-        if str(reaction.emoji) == emoji:
-            user_name = user.display_name  # Use the user's display name
-            if user_name in attendance_data[reaction.message.id]["teams"][team]:
-                attendance_data[reaction.message.id]["teams"][team].remove(user_name)
-            break
-
-    await update_attendance_message(reaction.message)
 
 
 # Start the bot with the token from your .env file
