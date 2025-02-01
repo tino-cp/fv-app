@@ -4,12 +4,6 @@ from pytz import timezone as pytz_timezone
 
 from globals import DEFAULT_TIMEZONE_STR, epoch, GAME_HOUR_LENGTH, WEEKDAYS, WEATHER_PERIOD, ORANGE, COUNTER_CLOCKWISE
 from models.weather import GTATime, Weather, WEATHER_STATE_CHANGES, WEATHER_STATES, RainETA, WeatherState
-from utils.common_utils import convert_to_timezone
-
-def hours_to_hhmm(hours: float) -> str:
-    """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
-    h, m = divmod(round(hours * 60), 60)
-    return f"{h:02}:{m:02}"
 
 def smart_day_time_format(date_format: str, dt: datetime) -> str:
     """
@@ -182,32 +176,3 @@ async def send_weather(message: discord.Message, timezone: str = DEFAULT_TIMEZON
     msg = await message.channel.send(embed=embed)
     await msg.add_reaction(COUNTER_CLOCKWISE)
     return msg
-
-def calculate_rain_duration(rain_eta, current_time, weather_state):
-    rain_duration_seconds = 0
-    if rain_eta.is_raining:
-        rain_duration_seconds = rain_eta.sec_eta
-    else:
-        next_rain_period = get_next_rain_periods(current_time, weather_state.gta_time.weather_period_time, 1)
-        if next_rain_period and "duration" in next_rain_period[0]:
-            duration_str = next_rain_period[0]["duration"]
-            if duration_str.endswith("m"):
-                rain_duration_seconds = int(duration_str[:-1]) * 60
-    return rain_duration_seconds
-
-def format_rain_duration(seconds):
-    minutes = seconds // 60
-    if minutes >= 60:
-        return f"{minutes // 60}h {minutes % 60}m"
-    return f"{minutes}m"
-
-def format_rain_period(rain_info):
-    start_time = rain_info['start_time']
-    end_time = rain_info['end_time']
-    duration = rain_info.get('duration', 'Unknown')
-    return (
-        f"**Type:** {rain_info.get('type', 'Unknown')}\n"
-        f"**Start:** {to_discord_timestamp(start_time, 't')}\n"
-        f"**End:** {to_discord_timestamp(end_time, 't')}\n"
-        f"**Duration:** {duration}\n"
-    )

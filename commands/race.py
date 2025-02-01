@@ -1,4 +1,6 @@
 from datetime import datetime, timezone as dt_timezone
+
+import discord
 from discord.ext import commands
 from utils.race_utils import fetch_closest_upcoming_round, process_race_series  # Adjusted imports
 
@@ -26,4 +28,9 @@ async def race(ctx, series: str = None, race_round: str = None):
             race_round = f"r{round_number}"
         await process_race_series(ctx, race_round, race_start, current_time, series)
     else:
-        await ctx.send("Invalid series! Please specify either 'f1' or 'f2'.")
+        embed = discord.Embed(
+            title="Invalid Series",
+            description="Please specify either 'f1' or 'f2'.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)

@@ -7,17 +7,12 @@ from discord.ext import commands
 
 from utils.weather_utils import to_discord_timestamp
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.messages = True
-
 # Global variables
 timer_message = None
 timer_task = None
 thread_counter = 1
 penalty_summary = {}
 auto_rename_threads = False
-
 
 class PenaltyCog(commands.Cog):
     def __init__(self, bot):
@@ -156,16 +151,32 @@ async def cancel_timer(ctx):
             cog.auto_rename_threads = False
         auto_rename_threads = False
         thread_counter = 1
-        await ctx.send("Timer has been cancelled.")
+
+        embed = discord.Embed(
+            title="Timer Cancelled",
+            description="The penalty submission timer has been cancelled.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
     else:
-        await ctx.send("No active timer to cancel.")
+        embed = discord.Embed(
+            title="No Active Timer",
+            description="There is no ongoing timer to cancel.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
 
 @commands.command(name='pen', help='Apply a penalty to the current thread.')
 async def pen_command(ctx, *, action: str):
     global penalty_summary
 
     if not isinstance(ctx.channel, discord.Thread):
-        await ctx.send("This command can only be used in a thread.")
+        embed = discord.Embed(
+            title="Invalid Channel",
+            description="This command can only be used in a thread.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
         return
 
     # Define no-reason actions
@@ -183,10 +194,18 @@ async def pen_command(ctx, *, action: str):
 
         # Validate input ranges
         if type_ == "S" and (amount < 1 or amount > 30):
-            await ctx.send("Time penalty must be between 1 and 30 seconds.")
+            embed = discord.Embed(
+                description="Time penalty must be between 1 and 30 seconds.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return
-        if type_ == "GD" and (amount < 1 or amount > 10):
-            await ctx.send("Grid drops must be between 1 and 10 positions.")
+        if type_ == "GD" and (amount < 1 or amount > 30):
+            embed = discord.Embed(
+                description="Grid drops must be between 1 and 30 positions.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return
 
         # Update thread name and summary
@@ -201,13 +220,22 @@ async def pen_command(ctx, *, action: str):
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(f"{amount}{type_} {name} - {reason}")
-        await ctx.send(f"Penalty applied: {amount}{type_} {name} - {reason}")
+        embed = discord.Embed(
+            description=f"Penalty applied: **{amount}{type_} {name} - {reason}**",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
     elif action.split()[0] in name_reason_actions:
         # Handle penalties that require name and reason
         parts = action.split(maxsplit=2)
         if len(parts) < 3:
-            await ctx.send("Invalid format. Use !pen <pen> <name> <reason>")
+            embed = discord.Embed(
+                description="Invalid format. Use `!pen <action> <name> <reason>`.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
             return
+
         pen, name, reason = parts
         thread_name_parts = ctx.channel.name.split(") ", 1)
         if len(thread_name_parts) > 1:
@@ -220,7 +248,11 @@ async def pen_command(ctx, *, action: str):
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(f"{pen} {name} - {reason}")
-        await ctx.send(f"Penalty applied: {pen} {name} - {reason}")
+        embed = discord.Embed(
+            description=f"Penalty applied: **{pen} {name} - {reason}**",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
     elif action in no_reason_actions:
         # Handle no-reason penalties
         thread_name_parts = ctx.channel.name.split(") ", 1)
@@ -234,7 +266,12 @@ async def pen_command(ctx, *, action: str):
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(action)
-        await ctx.send(f"Penalty applied: {action}")
+
+        embed = discord.Embed(
+            description=f"Penalty applied: **{action}**",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
     elif action.lower() == "sug":
         # Handle suggestion command
         thread_name_parts = ctx.channel.name.split(") ", 1)
@@ -243,8 +280,14 @@ async def pen_command(ctx, *, action: str):
         else:
             new_thread_name = "Waiting for suggestion"
         await ctx.channel.edit(name=new_thread_name)
-        await ctx.send("@trainee-stewards @stewards")
-        await ctx.send("Thread renamed to 'Waiting for suggestion' and trainee stewards & stewards have been notified.")
+
+        embed = discord.Embed(
+            description="Thread renamed to 'Waiting for suggestion'.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
+        # await ctx.send("@trainee-stewards @stewards")
+        # await ctx.send("Thread renamed to 'Waiting for suggestion' and trainee stewards & stewards have been notified.")
     elif action.lower().startswith("pov"):
         # Handle POV command
         name = action.split(maxsplit=1)[1] if len(action.split()) > 1 else "Unknown"
@@ -254,30 +297,61 @@ async def pen_command(ctx, *, action: str):
         else:
             new_thread_name = f"Waiting for POV {name}"
         await ctx.channel.edit(name=new_thread_name)
-        await ctx.send(f"Thread renamed to 'Waiting for POV {name}'.")
+        embed = discord.Embed(
+            description=f"Thread renamed to 'Waiting for POV {name}'.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
     else:
-        await ctx.send("Invalid penalty action or format. Use !pen start to initialize the thread first.")
-
+        embed = discord.Embed(
+            description="Invalid penalty action or format. Use `!pen start` to initialize the thread first.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
 
 @commands.command(name='psum', help='Display the penalty summary for this thread.')
 async def pen_summary(ctx):
     if not isinstance(ctx.channel, discord.Thread):
-        await ctx.send("This command can only be used in a thread.")
+        embed = discord.Embed(
+            title="Invalid Channel",
+            description="This command can only be used in a thread.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
         return
 
     if ctx.channel.id not in penalty_summary or not penalty_summary[ctx.channel.id]:
-        await ctx.send("No penalties applied to this thread yet.")
+        embed = discord.Embed(
+            title="No Penalties",
+            description="No penalties applied to this thread yet.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
         return
 
     summary = "\n".join(penalty_summary[ctx.channel.id])
-    await ctx.send(f"Penalty Summary:\n{summary}")
+    embed = discord.Embed(
+        title="Penalty Summary",
+        description=summary,
+        color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed)
 
 @commands.command(name='protest', help='Submit a protest.')
 async def protest_command(ctx):
     # Check if the user has the required role
     required_role = "Academy CEO"
     if required_role not in [role.name for role in ctx.author.roles]:
-        await ctx.send("You do not have permission to use this command.")
+        embed = discord.Embed(
+            description="You do not have permission to use this command. Only Academy CEOs can submit protests.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
         return
 
-    await ctx.send("Protest submitted.")
+    embed = discord.Embed(
+        title="Protest",
+        description="Protest submitted successfully.",
+        color=discord.Color.blue()
+    )
+    await ctx.send(embed=embed)
