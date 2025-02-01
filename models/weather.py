@@ -1,7 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from globals import SUNSET_TIME, SUNRISE_TIME
-from utils.common_utils import hours_to_hhmm, convert_to_timezone, format_datetime, seconds_to_verbose_interval, get_rain_eta_irl_time
+from utils.common_utils import hours_to_hhmm
+
+
 class Weather:
     def __init__(self, name: str, emoji: str, day_thumbnail: str, night_thumbnail: str):
         self.name = name
@@ -19,17 +21,39 @@ class GTATime:
         self.weather_period_time = weather_period_time
         self.is_day_time = SUNRISE_TIME <= self.hours_game_time < SUNSET_TIME
 
-
 # Represents rain estimation details (ETA)
 class RainETA:
     def __init__(self, sec_eta: int, is_raining: bool):
         self.sec_eta = sec_eta
-        self.str_eta = seconds_to_verbose_interval()
+        self.str_eta = self.seconds_to_verbose_interval()
         self.is_raining = is_raining
 
+    def seconds_to_verbose_interval(self):
+        if self.sec_eta < 60:
+            return 'Less than 1 minute'
 
-    def get_rain_eta_irl_time(self, current_time: datetime, timezone_str: str) -> str:
-        return get_rain_eta_irl_time(self.sec_eta, current_time, timezone_str)
+        minutes, seconds_left = divmod(int(self.sec_eta), 60)
+        hours, minutes = divmod(minutes, 60)
+
+        if hours > 0:
+            hours_suffix = "s" if hours > 1 else ""
+            hours_str = f"{hours} hour{hours_suffix}"
+        else:
+            hours_str = ''
+
+        if minutes > 0:
+            minutes_suffix = "s" if minutes > 1 else ""
+            minutes_str = f"{minutes} minute{minutes_suffix}"
+        else:
+            minutes_str = ''
+
+        if hours_str and minutes_str:
+            return f"{hours_str} and {minutes_str}"
+
+        elif hours_str and not minutes_str:
+            return hours_str
+
+        return minutes_str
 
 class WeatherState:
     """Represents the full current weather conditions"""

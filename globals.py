@@ -1,7 +1,6 @@
 from pytz import timezone as pytz_timezone
 from datetime import datetime, timezone as dt_timezone
 
-
 epoch: datetime = datetime(1970, 1, 1, tzinfo=dt_timezone.utc)  # used to get total_seconds
 
 ALIASES = ['current_weather', 'future_forecast']
