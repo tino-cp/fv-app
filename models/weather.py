@@ -24,9 +24,8 @@ class GTATime:
 class RainETA:
     def __init__(self, sec_eta: int, is_raining: bool):
         self.sec_eta = sec_eta
-        self.str_eta = seconds_to_verbose_interval()
+        self.str_eta = seconds_to_verbose_interval(sec_eta)
         self.is_raining = is_raining
-
 
     def get_rain_eta_irl_time(self, current_time: datetime, timezone_str: str) -> str:
         return get_rain_eta_irl_time(self.sec_eta, current_time, timezone_str)

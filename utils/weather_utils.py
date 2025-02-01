@@ -4,7 +4,7 @@ from pytz import timezone as pytz_timezone
 
 from globals import DEFAULT_TIMEZONE_STR, epoch, GAME_HOUR_LENGTH, WEEKDAYS, WEATHER_PERIOD, ORANGE, COUNTER_CLOCKWISE
 from models.weather import GTATime, Weather, WEATHER_STATE_CHANGES, WEATHER_STATES, RainETA, WeatherState
-from utils.common_utils import hours_to_hhmm, convert_to_timezone, format_datetime, seconds_to_verbose_interval, get_rain_eta_irl_time
+from utils.common_utils import convert_to_timezone
 
 def hours_to_hhmm(hours: float) -> str:
     """Convert a floating-point hour value (e.g., 14.5) to HH:MM (e.g., '14:30')."""
