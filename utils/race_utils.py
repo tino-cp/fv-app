@@ -66,8 +66,7 @@ async def send_race_weather(ctx, race_start_time: datetime, series: str) -> None
         # Ensure duration is converted to an integer for calculations
         rain_duration_seconds = rain_eta.sec_eta if rain_eta.is_raining else 0
         if not rain_eta.is_raining:
-            next_rain_period = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time,
-                                                     1)
+            next_rain_period = get_next_rain_periods(race_start_time, race_weather_state.gta_time.weather_period_time, 1)
             if next_rain_period and "duration" in next_rain_period[0]:
                 duration_str = next_rain_period[0]["duration"]
                 if duration_str.endswith("m"):
