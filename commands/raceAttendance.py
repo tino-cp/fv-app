@@ -44,13 +44,15 @@ class RaceAttendance(commands.Cog):
         self.refresh_views.start()
         self.attendance_files = {"F1": "attendance_f1.json", "F2": "attendance_f2.json"}
 
-    async def has_fia_role(self, ctx):
-        # Check if the user has the @FIA role
-        fia_role = discord.utils.get(ctx.guild.roles, name="FIA")
-        if fia_role in ctx.author.roles:
-            return True
-        await ctx.send("You do not have permission to use this command.")
-        return False
+    def load_attendance(self, category):
+        if os.path.exists(self.attendance_files[category]):
+            with open(self.attendance_files[category], 'r') as f:
+                return json.load(f)
+        return {}
+
+    def save_attendance(self, category, data):
+        with open(self.attendance_files[category], 'w') as f:
+            json.dump(data, f, indent=4)
 
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
