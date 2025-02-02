@@ -47,7 +47,7 @@ class RaceAttendance(commands.Cog):
         self.bot = bot
         self.refresh_views.start()  # Start the background task
 
-    async def has_fia_role(ctx):
+    async def has_fia_role(self, ctx):
         # Check if the user has the @FIA role
         fia_role = discord.utils.get(ctx.guild.roles, name="FIA")
         if fia_role in ctx.author.roles:

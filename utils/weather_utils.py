@@ -43,15 +43,15 @@ def format_datetime(date_time: datetime, format_str: str = "%Y-%m-%d %H:%M:%S %Z
     """
     return date_time.strftime(format_str)
 
-def to_discord_timestamp(date_time: datetime, format: str = 'F') -> str:
+def to_discord_timestamp(date_time: datetime, time_format: str = 'F') -> str:
     """
     Convert a datetime object to a Discord timestamp format.
     :param date_time: The datetime object to convert.
-    :param format: The format for the timestamp (default: 'F').
+    :param time_format: The format for the timestamp (default: 'F').
     :return: A string in the format <t:unix_timestamp:format>.
     """
     unix_timestamp = int(date_time.timestamp())
-    return f"<t:{unix_timestamp}:{format}>"
+    return f"<t:{unix_timestamp}:{time_format}>"
 
 
 # Function to get GTA time
