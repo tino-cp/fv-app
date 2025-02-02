@@ -132,7 +132,7 @@ class RaceAttendance(commands.Cog):
         await self.bot.wait_until_ready()
 
     def create_view(self, category):
-        view = View()
+        view = View(timeout=None)
         teams = TEAMS_F1 if category == "F1" else TEAMS_F2
         for team in teams:
             button = Button(label=team, style=discord.ButtonStyle.primary, custom_id=f"{category}_{team}")
