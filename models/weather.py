@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from globals import SUNSET_TIME, SUNRISE_TIME
 from utils.common_utils import hours_to_hhmm
 
