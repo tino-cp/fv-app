@@ -30,8 +30,7 @@ async def show_help(ctx):
             "---\n"
             "`!rain`\n"
             "- Shows 5 periods of upcoming rain forecasts at your location.\n\n"
-            "`!RAF1 or !RAF2`\n"
-            "Creates an attendance form for the specified League"
+            "---\n"
         ),
         inline=False
     )
@@ -70,5 +69,17 @@ async def show_help(ctx):
         ),
         inline=False
     )
+
+    embed.add_field(
+            name="Race attendance commands",
+            value=(
+            "`!RAF1 or !RAF2`\n"
+            "Creates an attendance form for the specified League\n"
+            "`!reset F1 or !reset F2`\n"
+            "Resets attendance\n"
+            ),
+            inline=False
+        )
+
 
     await ctx.send(embed=embed)
