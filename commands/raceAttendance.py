@@ -66,6 +66,8 @@ class RaceAttendance(commands.Cog):
 
     async def send_attendance_message(self, ctx, category):
         message = await self.create_attendance_message(ctx, category)
+        with open(f"attendance_{category}_message.json", "w") as f:
+            json.dump({"message_id": message.id, "channel_id": ctx.channel.id}, f, indent=4)
         return message
 
     async def create_attendance_message(self, ctx, category):
@@ -123,16 +125,26 @@ class RaceAttendance(commands.Cog):
         view = self.create_view(category)
         await message.edit(embed=embed, view=view)
 
-    @tasks.loop(minutes=14)
+    @tasks.loop(minutes=2)
     async def refresh_views(self):
-        pass
+        await self.bot.wait_until_ready()
+        for category in ["F1", "F2"]:
+            try:
+                with open(f"attendance_{category}_message.json", "r") as f:
+                    data = json.load(f)
+                    channel = self.bot.get_channel(data["channel_id"])
+                    if channel:
+                        message = await channel.fetch_message(data["message_id"])
+                        await self.update_race_attendance_message(message, category)
+            except (FileNotFoundError, discord.NotFound):
+                print(f"No saved attendance message for {category} or message was deleted.")
 
     @refresh_views.before_loop
     async def before_refresh_views(self):
         await self.bot.wait_until_ready()
 
     def create_view(self, category):
-        view = View(timeout=None)
+        view = View(timeout=None)  # Prevent view from expiring
         teams = TEAMS_F1 if category == "F1" else TEAMS_F2
         for team in teams:
             button = Button(label=team, style=discord.ButtonStyle.primary, custom_id=f"{category}_{team}")
