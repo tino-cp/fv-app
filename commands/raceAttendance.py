@@ -64,6 +64,29 @@ class RaceAttendance(commands.Cog):
         self.save_attendance("F2", {})
         await self.send_attendance_message(ctx, "F2")
 
+    @commands.command(name="reset")
+    async def reset_attendance(self, ctx, category: str):
+        """Resets the attendance for the given category (F1 or F2)."""
+        if category not in ["F1", "F2"]:
+            await ctx.send("Invalid category! Use `F1` or `F2`.")
+            return
+        
+        # Clear the attendance file
+        self.save_attendance(category, {})
+
+        # Try to reload and update the existing attendance message
+        try:
+            with open(f"attendance_{category}_message.json", "r") as f:
+                data = json.load(f)
+                channel = self.bot.get_channel(data["channel_id"])
+                if channel:
+                    message = await channel.fetch_message(data["message_id"])
+                    await self.update_race_attendance_message(message, category)
+                    await ctx.send(f"Attendance for {category} has been reset.")
+                    return
+        except (FileNotFoundError, discord.NotFound):
+            await ctx.send(f"No saved attendance message found for {category}.")
+
     async def send_attendance_message(self, ctx, category):
         message = await self.create_attendance_message(ctx, category)
         with open(f"attendance_{category}_message.json", "w") as f:
