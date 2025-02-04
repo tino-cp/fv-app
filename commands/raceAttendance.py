@@ -17,6 +17,8 @@ TEAMS_F1 = {
     "RedBull": "<:red:1275285685431177289>",
     "Williams": "<:wlms:844277423914745906>",
     "FIA Official": "<:fia:927351199387234386>",
+    "Not attending": "❌",
+    "Dont know yet": "❓",
     "Spectator": "👀",
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
@@ -34,6 +36,8 @@ TEAMS_F2 = {
     "Trident": "<:Trident:1272194719778213889>",
     "VAR": "<:var:1275285966894010419>",
     "FIA Official": "<:fia:927351199387234386>",
+    "Not attending": "❌",
+    "Dont know yet": "❓",
     "Spectator": "👀",
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
