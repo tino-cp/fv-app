@@ -14,6 +14,9 @@ thread_counter = 1
 penalty_summary = {}
 auto_rename_threads = False
 
+# ALLOWED_CHANNEL_IDS = { penalty submissions, variety submissions, testing }
+ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667}
+
 class PenaltyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -22,7 +25,7 @@ class PenaltyCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread):
-        if self.auto_rename_threads:
+        if self.auto_rename_threads and thread.parent_id in ALLOWED_CHANNEL_IDS:
             new_thread_name = f"{self.thread_counter}) {thread.name}"
             await thread.edit(name=new_thread_name)
             self.thread_counter += 1
