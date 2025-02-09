@@ -25,6 +25,9 @@ from commands.race import race
 from commands.penalty import start_timer, cancel_timer, pen_command, pen_summary, protest_command, PenaltyCog
 from commands.help import show_help
 from commands.raceAttendance import RaceAttendance
+from commands.regs import regs
+from commands.downforce import downforce
+
 
 bot.add_command(weather)
 bot.add_command(rain)
@@ -35,6 +38,8 @@ bot.add_command(show_help)
 bot.add_command(pen_command)
 bot.add_command(pen_summary)
 bot.add_command(protest_command)
+bot.add_command(regs)
+bot.add_command(downforce)
 
 @bot.event
 async def on_ready():
