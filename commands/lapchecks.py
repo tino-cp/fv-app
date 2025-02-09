@@ -54,7 +54,7 @@ class LapChecks(commands.Cog):
                 hit_status = "🔴"  # Red emoji for miss
 
             # Format the output line for this position
-            chance_str = f"{chance:.2%}" if chance < 1.0 else "100.00%"
+            chance_str = f"{chance:.2%}" if chance < 1.0 else "100.0%"
             output_lines.append(
                 f"|   P{position}   | {chance_str} | {roll:.2f} |  {hit_status}  |"
             )
