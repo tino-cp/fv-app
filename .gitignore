@@ -32,3 +32,12 @@ desktop.ini     # Windows desktop settings
 # Coverage reports
 .coverage
 *.cover
+
+#AttendanceLocalFiles
+
+attendance.json
+attendance_f1.json
+attendance_f2.json
+race_attendance.json
+attendance_F1_message.json
+attendance_F2_message.json
