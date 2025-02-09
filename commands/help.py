@@ -9,13 +9,16 @@ async def show_help(ctx):
     embed = discord.Embed(
         title="Bot Command Help",
         description="Here are all the available commands for this bot:",
-        color=discord.Color.blue()  # Use a general color for the embed
+        color=discord.Color.gold()  # Use a general color for the embed
     )
 
     # General Commands
     embed.add_field(
         name="General Commands",
         value=(
+            "`!regs` - Prints out link to regulations\n"
+            "`!df` - Prints out downforce setting for each formula car\n"
+            "---\n"
             "`!race <league> <round>`\n"
             "- Retrieve weather conditions at the start of a race.\n"
             "- **Leagues**: `f1`, `f2`\n"
