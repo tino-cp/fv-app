@@ -2,7 +2,6 @@ import random
 from discord.ext import commands
 import discord
 
-
 def calculate_lap_check_chance(position):
     """
     Calculate the chance of being lap-checked based on the given position using the adjusted formula.
@@ -25,7 +24,6 @@ def calculate_lap_check_chance(position):
 
     return chance
 
-
 class LapChecks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -35,8 +33,10 @@ class LapChecks(commands.Cog):
         """
         Command to roll out lap checks for all positions using the adjusted formula.
         """
+        global roll
         lap_checks = []  # Stores positions that get a lap check
         output_lines = []  # Stores formatted output for each position
+        roll_values = {}  # Stores the roll value for each position
 
         # Iterate through positions 1 to 20
         for position in range(1, 21):
@@ -45,6 +45,8 @@ class LapChecks(commands.Cog):
 
             # Roll a random number between 0 and 1 to determine if it hits
             roll = random.random()
+            roll_values[position] = roll
+
             if roll < chance:
                 lap_checks.append(position)
                 hit_status = "🟢"  # Green emoji for hit
@@ -52,9 +54,13 @@ class LapChecks(commands.Cog):
                 hit_status = "🔴"  # Red emoji for miss
 
             # Format the output line for this position
+            chance_str = f"{chance:.2%}" if chance < 1.0 else "100.00%"
             output_lines.append(
-                f"|   P{position}   | {chance:.2%}  | {roll:.2f} |  {hit_status}  |"
+                f"|   P{position}   | {chance_str} | {roll:.2f} |  {hit_status}  |"
             )
+
+            print(f"Position: {position}, Chance: {chance:.2%}, Roll: {roll:.2f}, Status: {hit_status}")
+
 
         # If any position hits, ensure all positions above the lowest one also hit
         if lap_checks:
@@ -67,7 +73,7 @@ class LapChecks(commands.Cog):
                     lap_checks.append(position)
                     # Update the output line for this position to show it was added
                     output_lines[position - 1] = (
-                        f"|   P{position}   | {calculate_lap_check_chance(position):.2%}  | {random.random():.2f} |  🟡  |"
+                        f"|   P{position}   | {calculate_lap_check_chance(position):.2%} | {roll_values[position]:.2f} |  🟡  |"
                     )
 
         # Create the embed
