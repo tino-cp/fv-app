@@ -38,6 +38,23 @@ async def show_help(ctx):
         inline=False
     )
 
+        # Protests Commands
+    embed.add_field(
+        name="Protests",
+        value=(
+            "`!protest <team>`\n"
+            "Creates a protest for your team, Only Academy CEO can submit a protest\n"
+            "\n\n"
+            "`!protests`\n"
+            "See how many protests each team had\n"
+            "\n\n"
+            "`!revertProtest <team>`\n"
+            "If protest was sucesfull their protest point will be reverted, Only Head stewards or Admins can revert\n"
+            "\n\n"
+        ),
+        inline=False
+    )
+
     # FIA Penalty Commands
     embed.add_field(
         name="FIA Penalty Commands",

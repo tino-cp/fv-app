@@ -20,24 +20,32 @@ def save_protests(data):
         json.dump(data, f, indent=4)
 
 @commands.command(name="protest", help="Submit a protest for a team.")
-async def protest_command(ctx, team: str):  # Type hint should just be `str`
-    team = team.upper()  # Convert the input to uppercase
+async def protest_command(ctx, team: str):  
+    allowed_roles = {"Head Steward", "Academy CEO"}
+    user_roles = {role.name for role in ctx.author.roles}
+
+    if not allowed_roles.intersection(user_roles):
+        embed = discord.Embed(
+            description="❌ You do not have permission to use this command. Only Head Stewards and Academy CEOs can submit protests.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+    
+    team = team.upper()  # Standardize team names
     protests = load_protests()
 
-    # Ensure team exists in protests.json
     if team not in protests:
         protests[team] = []
 
-    # Check if max protests reached
     if len(protests[team]) >= MAX_PROTESTS:
         embed = discord.Embed(
-            description=f"{team} has already used all {MAX_PROTESTS} protest points.",
+            description=f"⚠️ {team} has already used all {MAX_PROTESTS} protest points.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
         return
 
-    # Add protest with username and timestamp
     protest_entry = {
         "user": ctx.author.name,
         "user_id": ctx.author.id,
@@ -46,11 +54,46 @@ async def protest_command(ctx, team: str):  # Type hint should just be `str`
     protests[team].append(protest_entry)
     save_protests(protests)
 
-    # Send protest confirmation + link
     embed = discord.Embed(
         title="Protest Submitted",
         description=f"✅ {team} has submitted a protest.\n\n[Create a ticket here](https://discord.com/channels/843175947304960020/982599539414413332/1003349125699477574)",
         color=discord.Color.gold()
+    )
+    await ctx.send(embed=embed)
+
+@commands.command(name="revertProtest", help="Revert the last protest for a team (Head Stewards only).")
+async def revert_protest_command(ctx, team: str): 
+
+    allowed_roles = {"Head Steward", "Admin"}
+    user_roles = {role.name for role in ctx.author.roles}
+
+    if not allowed_roles.intersection(user_roles):
+        embed = discord.Embed(
+            description="❌ Only Head Stewards or Admins can revert protests.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
+    team = team.upper()
+    protests = load_protests()
+
+    if team not in protests or not protests[team]:  
+        embed = discord.Embed(
+            description=f"⚠️ {team} has no protests to revert.",
+            color=discord.Color.orange()
+        )
+        await ctx.send(embed=embed)
+        return
+    
+    # Remove the last protest entry
+    last_protest = protests[team].pop()
+    save_protests(protests)
+
+    embed = discord.Embed(
+        title="Protest Reverted",
+        description=f"✅ A protest for {team} has been reverted.\n\n**Removed protest by:** {last_protest['user']} on {last_protest['timestamp']}",
+        color=discord.Color.green()
     )
     await ctx.send(embed=embed)
 
