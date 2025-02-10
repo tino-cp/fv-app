@@ -335,22 +335,3 @@ async def pen_summary(ctx):
         color=discord.Color.blue()
     )
     await ctx.send(embed=embed)
-
-@commands.command(name='protest', help='Submit a protest.')
-async def protest_command(ctx):
-    # Check if the user has the required role
-    required_role = "Academy CEO"
-    if required_role not in [role.name for role in ctx.author.roles]:
-        embed = discord.Embed(
-            description="You do not have permission to use this command. Only Academy CEOs can submit protests.",
-            color=discord.Color.red()
-        )
-        await ctx.send(embed=embed)
-        return
-
-    embed = discord.Embed(
-        title="Protest",
-        description="Protest submitted successfully.",
-        color=discord.Color.blue()
-    )
-    await ctx.send(embed=embed)
