@@ -7,6 +7,12 @@ from datetime import datetime
 PROTESTS_FILE = "protests.json"  # File where protests are stored
 MAX_PROTESTS = 3  # Maximum protests per team
 
+# List of allowed teams (without duplicates)
+ALLOWED_TEAMS = {
+    "ART", "CAM", "DAM", "HIT", "MP", "PRE", "TRI", "VAR", "AIX", "ROD", "INV",
+    "ALP", "AST", "FER", "HAA", "MCL", "MER", "RCB", "RED", "SAU", "WIL"
+}
+
 def load_protests():
     """Loads protests from a JSON file."""
     if os.path.exists(PROTESTS_FILE):
@@ -33,6 +39,15 @@ async def protest_command(ctx, team: str):
         return
     
     team = team.upper()  # Standardize team names
+
+    if team not in ALLOWED_TEAMS:
+        embed = discord.Embed(
+            description=f"❌ Invalid team name! Allowed teams: {', '.join(ALLOWED_TEAMS)}",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
     protests = load_protests()
 
     if team not in protests:
@@ -62,8 +77,7 @@ async def protest_command(ctx, team: str):
     await ctx.send(embed=embed)
 
 @commands.command(name="revertProtest", help="Revert the last protest for a team (Head Stewards only).")
-async def revert_protest_command(ctx, team: str): 
-
+async def revert_protest_command(ctx, team: str):  
     allowed_roles = {"Head Steward", "Admin"}
     user_roles = {role.name for role in ctx.author.roles}
 
@@ -76,6 +90,15 @@ async def revert_protest_command(ctx, team: str):
         return
 
     team = team.upper()
+
+    if team not in ALLOWED_TEAMS:
+        embed = discord.Embed(
+            description=f"❌ Invalid team name! Allowed teams: {', '.join(ALLOWED_TEAMS)}",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+        return
+
     protests = load_protests()
 
     if team not in protests or not protests[team]:  
