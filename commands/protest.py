@@ -7,7 +7,7 @@ from datetime import datetime
 PROTESTS_FILE = "protests.json"  # File where protests are stored
 MAX_PROTESTS = 3  # Maximum protests per team
 
-# List of allowed teams (without duplicates)
+# List of allowed teams 
 ALLOWED_TEAMS = {
     "ART", "CAM", "DAM", "HIT", "MP", "PRE", "TRI", "VAR", "AIX", "ROD", "INV",
     "ALP", "AST", "FER", "HAA", "MCL", "MER", "RCB", "RED", "SAU", "WIL"
