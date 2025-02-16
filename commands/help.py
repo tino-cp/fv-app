@@ -3,13 +3,10 @@ from discord.ext import commands
 
 @commands.command(name="help")
 async def show_help(ctx):
-    """
-    Unified help command displaying all bot commands in a single embed.
-    """
     embed = discord.Embed(
-        title="Bot Command Help",
+        title="Bot Help Command",
         description="Here are all the available commands for this bot:",
-        color=discord.Color.blue()  # Use a general color for the embed
+        color=discord.Color.blue()
     )
 
     # General Commands
@@ -71,15 +68,15 @@ async def show_help(ctx):
     )
 
     embed.add_field(
-            name="Race attendance commands",
-            value=(
-            "`!RAF1 or !RAF2`\n"
-            "Creates an attendance form for the specified League\n"
-            "`!reset F1 or !reset F2`\n"
-            "Resets attendance\n"
-            ),
-            inline=False
-        )
+        name="Race attendance commands",
+        value=(
+        "`!RAF1 or !RAF2`\n"
+        "Creates an attendance form for the specified League\n"
+        "`!reset F1 or !reset F2`\n"
+        "Resets attendance\n"
+        ),
+        inline=False
+    )
 
 
     await ctx.send(embed=embed)

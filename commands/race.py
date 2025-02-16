@@ -16,13 +16,11 @@ async def race(ctx, series: str = None, race_round: str = None):
     race_round = race_round.lower() if race_round else None
     current_time = datetime.now(dt_timezone.utc)
 
-    # Define base start dates for regular races
+    # Constants for race data
     base_race_start_dates = {
         "f1": datetime(2025, 1, 5, 19, 0, tzinfo=dt_timezone.utc),
         "f2": datetime(2025, 1, 4, 18, 0, tzinfo=dt_timezone.utc)
     }
-
-    # Define sprint races that start 30 minutes earlier
     sprint_races = {"r3", "r7", "r11"}
 
     if series in base_race_start_dates:
