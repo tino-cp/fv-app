@@ -27,7 +27,7 @@ def save_protests(data):
 
 @commands.command(name="protest", help="Submit a protest for a team.")
 async def protest_command(ctx, team: str):  
-    allowed_roles = {"Head Steward", "Academy CEO", "Formula 1", "Formula 2"}
+    allowed_roles = {"Academy CEO", "Formula 1", "Formula 2", "F2 Team Manager ", "F1 Team Principal"}
     user_roles = {role.name for role in ctx.author.roles}
 
     if not allowed_roles.intersection(user_roles):
@@ -78,7 +78,7 @@ async def protest_command(ctx, team: str):
 
 @commands.command(name="revertProtest", help="Revert the last protest for a team (Head Stewards only).")
 async def revert_protest_command(ctx, team: str):  
-    allowed_roles = {"Head Steward", "Admin"}
+    allowed_roles = {"Admin", "Owner", "Steward"}
     user_roles = {role.name for role in ctx.author.roles}
 
     if not allowed_roles.intersection(user_roles):
