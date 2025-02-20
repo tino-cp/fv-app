@@ -30,6 +30,7 @@ from commands.downforce import downforce
 from commands.protest import protest_command, protests_command, revert_protest_command
 from commands.nuke import nuke_command
 from commands.standings import standings_command
+from commands.results import results_command
 
 bot.add_command(weather)
 bot.add_command(rain)
@@ -46,6 +47,7 @@ bot.add_command(protests_command)
 bot.add_command(revert_protest_command)
 bot.add_command(nuke_command)
 bot.add_command(standings_command)
+bot.add_command(results_command)
 
 
 @bot.event
