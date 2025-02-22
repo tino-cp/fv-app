@@ -64,11 +64,29 @@ async def results_command(ctx, race: str):
             except ValueError:
                 return str(time_value)  # Fallback for unexpected values
 
-        # Format race results
+        # Find the driver with the fastest lap
+        fastest_lap_driver = None
+        fastest_lap_time = float("inf")  # Set to a very high value to find the minimum
+
+        for _, row in race_results.iterrows():
+            if pd.notna(row['Fast Lap']) and row['Fast Lap'] != 'N/A' and row['Fast Lap'] != 'DNF':
+                # If the fast lap is a datetime.time object, convert it to total seconds
+                if isinstance(row['Fast Lap'], datetime.time):
+                    lap_time = row['Fast Lap'].minute * 60 + row['Fast Lap'].second + (row['Fast Lap'].microsecond / 1_000_000)
+                else:
+                    # Otherwise, it's already a string, so we handle it as before
+                    lap_time = float(row['Fast Lap'].split(":")[1]) + (float(row['Fast Lap'].split(":")[0]) * 60)  # Convert time to seconds
+                
+                if lap_time < fastest_lap_time:
+                    fastest_lap_time = lap_time
+                    fastest_lap_driver = row['Driver']
+
+        # Format race results with the star emoji for the fastest lap
         results_text = "\n\n".join([
             f"**{row['Driver']} ({row['Team']})**\n"
             f"{row['Pts']} pts | ⏱ {format_time(row['Race Time'])} | Fast Lap: {format_time(row['Fast Lap'])}"
-            + (f" | ⚠️ Penalty: {row['Penalty']}" if "Penalty" in race_results.columns and pd.notna(row['Penalty']) else "")
+            + (f" | ⚠️ Penalty: {row['Penalty']}" if "Penalty" in race_results.columns and pd.notna(row['Penalty']) and str(row['Penalty']).strip() else "")
+            + (" ⭐" if row['Driver'] == fastest_lap_driver else "")
             for _, row in race_results.iterrows()
         ])
 
