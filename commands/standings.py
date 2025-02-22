@@ -3,9 +3,11 @@ from discord.ext import commands
 import pandas as pd
 import requests
 import io
+import os
+from dotenv import load_dotenv
 
+ONEDRIVE_LINK = os.getenv("ONEDRIVE_LINK")
 # Direct download link from OneDrive
-ONEDRIVE_LINK = "https://1drv.ms/x/c/9c4419a56c87af87/EcWEZzJck3BJjL6mBqoLV18B4yHpFpphqMnLTIkg2yOraA?download=1"
 
 @commands.command(name="standings", help="Get current F1 or F2 standings. Usage: !standings F1 or !standings F2")
 async def standings_command(ctx, category: str = None):

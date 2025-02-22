@@ -4,8 +4,11 @@ import pandas as pd
 import requests
 import io
 import datetime
+import os
+from dotenv import load_dotenv
 
-ONEDRIVE_LINK = "https://1drv.ms/x/c/9c4419a56c87af87/EcWEZzJck3BJjL6mBqoLV18B4yHpFpphqMnLTIkg2yOraA?download=1"
+ONEDRIVE_LINK = os.getenv("ONEDRIVE_LINK")
+
 
 @commands.command(name="results", help="Get race results for a specific race (e.g., !results F1_R1)")
 async def results_command(ctx, race: str):
