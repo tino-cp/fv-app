@@ -83,10 +83,10 @@ async def results_command(ctx, race: str):
 
         # Format race results with the star emoji for the fastest lap
         results_text = "\n\n".join([
-            f"**{row['Driver']} ({row['Team']})**\n"
+            f"**{row['Position']}. {row['Driver']} ({row['Team']})**\n"
             f"{row['Pts']} pts | ⏱ {format_time(row['Race Time'])} | Fast Lap: {format_time(row['Fast Lap'])}"
+            + (f" ⭐" if row['Driver'] == fastest_lap_driver else "")
             + (f" | ⚠️ Penalty: {row['Penalty']}" if "Penalty" in race_results.columns and pd.notna(row['Penalty']) and str(row['Penalty']).strip() else "")
-            + (" ⭐" if row['Driver'] == fastest_lap_driver else "")
             for _, row in race_results.iterrows()
         ])
 
