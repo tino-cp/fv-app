@@ -3,6 +3,7 @@ from discord.ext import commands
 import pandas as pd
 import requests
 import io
+import datetime
 
 ONEDRIVE_LINK = "https://1drv.ms/x/c/9c4419a56c87af87/EcWEZzJck3BJjL6mBqoLV18B4yHpFpphqMnLTIkg2yOraA?download=1"
 
@@ -25,7 +26,7 @@ async def results_command(ctx, race: str):
             await ctx.send(embed=embed)
             return
 
-        # Read race results (AQ78:AW97 -> zero-indexed: 77:97, 42:49)
+        # Read race results (AQ78:AW97 -> zero-indexed: 76:97, 42:49)
         df = excel_data.parse(race)
         race_results = df.iloc[76:97, 42:49]  # 7 columns expected
 
@@ -41,17 +42,33 @@ async def results_command(ctx, race: str):
         race_results["Position"] = race_results["Position"].fillna(0).astype(int)
         race_results["Pts"] = race_results["Pts"].fillna(0).astype(int)
 
-        # Format time correctly (remove 00: if present)
+        # Function to format time correctly
         def format_time(time_value):
             if pd.isna(time_value):
                 return "N/A"
-            time_str = str(time_value)
-            return time_str[3:] if time_str.startswith("00:") else time_str  # Remove "00:" prefix
+            try:
+                if isinstance(time_value, datetime.time):
+                    # Convert to string and extract MM:SS.sss
+                    time_str = time_value.strftime("%H:%M:%S.%f")[:-3]  # Remove extra decimals
+                    return time_str[3:] if time_str.startswith("00:") else time_str  # Remove "00:"
+                elif isinstance(time_value, (pd.Timestamp, pd.Timedelta)):
+                    total_seconds = time_value.total_seconds()
+                    minutes = int(total_seconds // 60)
+                    seconds = total_seconds % 60
+                    return f"{minutes}:{seconds:06.3f}"  # MM:SS.sss format
+                elif isinstance(time_value, str) and ":" in time_value:
+                    parts = time_value.split(":")
+                    minutes, seconds = parts[-2], parts[-1]  # Keep last two parts
+                    return f"{minutes}:{float(seconds):06.3f}"
+                return f"{float(time_value):.3f}"  # Ensure three decimal places
+            except ValueError:
+                return str(time_value)  # Fallback for unexpected values
 
         # Format race results
-        results_text = "\n".join([
-            f"**{row['Position']}. {row['Driver']}** ({row['Team']}) - {row['Pts']} pts | ⏱ {format_time(row['Race Time'])} | Fast Lap: {format_time(row['Fast Lap'])}" +
-            (f" | ⚠️ Penalty: {row['Penalty']}" if "Penalty" in race_results.columns and pd.notna(row['Penalty']) else "")
+        results_text = "\n\n".join([
+            f"**{row['Driver']} ({row['Team']})**\n"
+            f"{row['Pts']} pts | ⏱ {format_time(row['Race Time'])} | Fast Lap: {format_time(row['Fast Lap'])}"
+            + (f" | ⚠️ Penalty: {row['Penalty']}" if "Penalty" in race_results.columns and pd.notna(row['Penalty']) else "")
             for _, row in race_results.iterrows()
         ])
 
