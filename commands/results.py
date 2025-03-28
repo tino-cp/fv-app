@@ -1,24 +1,15 @@
 import discord
 from discord.ext import commands
 import pandas as pd
-import requests
-import io
 import datetime
 import os
-from dotenv import load_dotenv
-
-ONEDRIVE_LINK = os.getenv("ONEDRIVE_LINK")
-
 
 @commands.command(name="results", help="Get race results for a specific race (e.g., !results F1_R1)")
 async def results_command(ctx, race: str):
     try:
-        # Download the Excel file
-        response = requests.get(ONEDRIVE_LINK)
-        response.raise_for_status()
-
-        # Read the Excel file
-        excel_data = pd.ExcelFile(io.BytesIO(response.content))
+        # Load the Excel file directly
+        excel_path = "Formula V SuperLicense (S13).xlsx"
+        excel_data = pd.ExcelFile(excel_path, engine='openpyxl')
 
         # Check if the requested race sheet exists
         if race not in excel_data.sheet_names:

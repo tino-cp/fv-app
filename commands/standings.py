@@ -1,13 +1,7 @@
 import discord
 from discord.ext import commands
 import pandas as pd
-import requests
-import io
 import os
-from dotenv import load_dotenv
-
-ONEDRIVE_LINK = os.getenv("ONEDRIVE_LINK")
-# Direct download link from OneDrive
 
 @commands.command(name="standings", help="Get current F1 or F2 standings. Usage: !standings F1 or !standings F2")
 async def standings_command(ctx, category: str = None):
@@ -36,13 +30,9 @@ async def standings_command(ctx, category: str = None):
         return
 
     try:
-        # Download the Excel file
-        response = requests.get(ONEDRIVE_LINK)
-        response.raise_for_status()  
-
-        # Load Excel file
-        excel_data = pd.ExcelFile(io.BytesIO(response.content))
-        df = excel_data.parse("Calendar and Standings")
+        # Load the Excel file directly from local storage
+        excel_path = "Formula V SuperLicense (S13).xlsx"
+        df = pd.read_excel(excel_path, sheet_name="Calendar and Standings")
 
         # Extract the relevant standings
         start_row, end_row, start_col, end_col = STANDINGS_RANGES[category]
