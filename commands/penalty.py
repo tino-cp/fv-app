@@ -1,6 +1,7 @@
 import asyncio
 import re
 from datetime import datetime, timedelta
+import os
 
 import discord
 from discord.ext import commands
@@ -13,6 +14,17 @@ timer_task = None
 thread_counter = 1
 penalty_summary = {}
 auto_rename_threads = False
+
+LOG_FILE = "penalty_log.txt"
+
+def log_penalty(user: str, action: str, thread_name: str):
+    """Append penalty details to a log file."""
+    log_entry = f"{action} by {user} in thread {thread_name}\n"
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(log_entry)
+
+
+
 
 # ALLOWED_CHANNEL_IDS = { penalty submissions, variety submissions, testing }
 ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667}
@@ -186,6 +198,10 @@ async def pen_command(ctx, *, action: str):
         )
         await ctx.send(embed=embed)
         return
+
+    thread_name = ctx.channel.name
+    user = ctx.author.display_name
+    log_penalty(user, action, thread_name)
 
     # Define no-reason actions (case-insensitive)
     no_reason_actions = ["NFA", "NFI", "LI", "RI"]
