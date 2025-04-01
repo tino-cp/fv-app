@@ -60,6 +60,24 @@ class RaceAttendance(commands.Cog):
         with open(self.attendance_files[category], 'w') as f:
             json.dump(data, f, indent=4)
 
+    @commands.command(name="RA")
+    async def race_attendance(self, ctx, *, track_name: str):
+        """Handles race attendance for both F1 and F2 with the track name."""
+        
+        # Send first title message for F1
+        emoji_f1 = "<:FV1:1070246742693531688>"
+        await ctx.send(f"# {emoji_f1} {track_name} {emoji_f1}")
+        
+        # Call the RAF1 command
+        await self.race_attendance_f1(ctx)
+        
+        # Send second title message for F2
+        emoji_f2 = "<:FV2:1070247024588492901>"
+        await ctx.send(f"# {emoji_f2} {track_name} {emoji_f2}")
+        
+        # Call the RAF2 command
+        await self.race_attendance_f2(ctx)
+
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
         self.save_attendance("F1", {})
