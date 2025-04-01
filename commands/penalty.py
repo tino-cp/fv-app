@@ -285,7 +285,6 @@ async def pen_command(ctx, *, action: str):
             color=discord.Color.green()
         )
         await ctx.send(embed=embed)
-        await ctx.send("<@&1172648589323939880> <@&1271689962785603654>")
     elif action.lower().startswith("pov"):
         name = action.split(maxsplit=1)[1] if len(action.split()) > 1 else "Unknown"
         thread_name_parts = ctx.channel.name.split(") ", 1)
