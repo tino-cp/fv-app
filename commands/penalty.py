@@ -27,30 +27,37 @@ def log_penalty(user: str, action: str, thread_name: str):
 
 
 # ALLOWED_CHANNEL_IDS = { penalty submissions, variety submissions, testing }
-ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667}
+ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667, 1334666588997161074}
 
 class PenaltyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.auto_rename_threads = False
         self.thread_counter = 1
+        self.current_league = None  
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread):
         if self.auto_rename_threads and thread.parent_id in ALLOWED_CHANNEL_IDS:
-            new_thread_name = f"{self.thread_counter}) {thread.name}"
+            new_thread_name = f"{self.current_league} {self.thread_counter}) {thread.name}"
             await thread.edit(name=new_thread_name)
             self.thread_counter += 1
 
 @commands.command(name='rpo', help='Start a 60-minute timer and display the status.')
-async def start_timer(ctx, sprint: str = None):
+async def start_timer(ctx, league: str = None, sprint: str = None):
     global timer_message, timer_task, auto_rename_threads, thread_counter
+
+    # Validate league input
+    if league not in ["F1", "F2"]:
+        await ctx.send("Invalid league! Please use `!rpo F1` or `!rpo F2`.")
+        return
 
     # Reset thread counter and enable auto-renaming
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
         cog.thread_counter = 1
         cog.auto_rename_threads = True
+        cog.current_league = league  # Set the current league
     thread_counter = 1
     auto_rename_threads = True
 
@@ -86,6 +93,10 @@ async def start_timer(ctx, sprint: str = None):
     # Start the timer task
     timer_task = asyncio.create_task(wait_and_close_timer(ctx, end_time))
 
+    # Create a thread and rename it
+    thread = await ctx.channel.create_thread(name=f"{league} {thread_counter})")
+    thread_counter += 1
+
 async def wait_and_close_timer(ctx, end_time):
     global auto_rename_threads
 
@@ -95,7 +106,7 @@ async def wait_and_close_timer(ctx, end_time):
     # After 60 minutes, disable auto-renaming and close the timer
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
-        cog.auto_rename_threads = True
+        cog.auto_rename_threads = False
     auto_rename_threads = False
     await update_timer_message()
     await close_timer(ctx, end_time)
