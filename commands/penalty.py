@@ -19,7 +19,7 @@ LOG_FILE = "penalty_log.txt"
 
 def log_penalty(user: str, action: str, thread_name: str):
     """Append penalty details to a log file."""
-    log_entry = f"{action} by {user} in thread {thread_name}\n"
+    log_entry = f"{action} \t by \t {user} \t in thread \t {thread_name}\n"
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
@@ -201,7 +201,6 @@ async def pen_command(ctx, *, action: str):
 
     thread_name = ctx.channel.name
     user = ctx.author.display_name
-    log_penalty(user, action, thread_name)
 
     # Define no-reason actions (case-insensitive)
     no_reason_actions = ["NFA", "NFI", "LI", "RI"]
@@ -237,6 +236,10 @@ async def pen_command(ctx, *, action: str):
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""))
+
+        # **Log successful penalty**
+        log_penalty(user, f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""), thread_name)
+
         embed = discord.Embed(
             description=f"Penalty applied: **{amount}{type_} {name}" + (f" - {reason}**" if reason else "**"),
             color=discord.Color.green()
@@ -264,6 +267,10 @@ async def pen_command(ctx, *, action: str):
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(f"{pen} {name}" + (f" - {reason}" if reason else ""))
+
+        # **Log successful penalty**
+        log_penalty(user, f"{pen} {name}" + (f" - {reason}" if reason else ""), thread_name)
+
         embed = discord.Embed(
             description=f"Penalty applied: **{pen} {name}" + (f" - {reason}**" if reason else "**"),
             color=discord.Color.green()
@@ -282,37 +289,11 @@ async def pen_command(ctx, *, action: str):
             penalty_summary[ctx.channel.id] = []
         penalty_summary[ctx.channel.id].append(action.upper())
 
+        # **Log successful penalty**
+        log_penalty(user, action.upper(), thread_name)
+
         embed = discord.Embed(
             description=f"Penalty applied: **{action.upper()}**",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    elif action.lower() == "sug":
-        thread_name_parts = ctx.channel.name.split(") ", 1)
-        new_thread_name = (
-            f"{thread_name_parts[0]}) Waiting for suggestion"
-            if len(thread_name_parts) > 1
-            else "Waiting for suggestion"
-        )
-        await ctx.channel.edit(name=new_thread_name)
-
-        embed = discord.Embed(
-            description="Thread renamed to 'Waiting for suggestion'. Stewards and Trainee stewards have been notified.",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    elif action.lower().startswith("pov"):
-        name = action.split(maxsplit=1)[1] if len(action.split()) > 1 else "Unknown"
-        thread_name_parts = ctx.channel.name.split(") ", 1)
-        new_thread_name = (
-            f"{thread_name_parts[0]}) Waiting for POV {name}"
-            if len(thread_name_parts) > 1
-            else f"Waiting for POV {name}"
-        )
-        await ctx.channel.edit(name=new_thread_name)
-
-        embed = discord.Embed(
-            description=f"Thread renamed to 'Waiting for POV {name}'.",
             color=discord.Color.green()
         )
         await ctx.send(embed=embed)
