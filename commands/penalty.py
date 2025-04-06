@@ -23,8 +23,9 @@ def log_penalty(user: str, action: str, thread_name: str):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
-
-
+def add_tick_to_name(name: str) -> str:
+    """Add ✅ at the start if not already present."""
+    return name if name.startswith("✅") else f"✅ {name}"
 
 # ALLOWED_CHANNEL_IDS = { penalty submissions, variety submissions, testing }
 ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667, 1334666588997161074}
@@ -242,7 +243,7 @@ async def pen_command(ctx, *, action: str):
             if len(thread_name_parts) > 1
             else f"{amount}{type_} {name}" + (f" - {reason}" if reason else "")
         )
-        await ctx.channel.edit(name=new_thread_name)
+        await ctx.channel.edit(name=add_tick_to_name(new_thread_name))
 
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
@@ -273,7 +274,7 @@ async def pen_command(ctx, *, action: str):
             if len(thread_name_parts) > 1
             else f"{pen} {name}" + (f" - {reason}" if reason else "")
         )
-        await ctx.channel.edit(name=new_thread_name)
+        await ctx.channel.edit(name=add_tick_to_name(new_thread_name))
 
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
@@ -294,7 +295,7 @@ async def pen_command(ctx, *, action: str):
             if len(thread_name_parts) > 1
             else action.upper()
         )
-        await ctx.channel.edit(name=new_thread_name)
+        await ctx.channel.edit(name="✅" + new_thread_name)
 
         if ctx.channel.id not in penalty_summary:
             penalty_summary[ctx.channel.id] = []
@@ -305,6 +306,51 @@ async def pen_command(ctx, *, action: str):
 
         embed = discord.Embed(
             description=f"Penalty applied: **{action.upper()}**",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
+    elif action.lower().startswith("pov "):
+        parts = action.split(maxsplit=1)
+        if len(parts) < 2:
+            embed = discord.Embed(description="Invalid format. Use `!pen pov <name>`.", color=discord.Color.red())
+            await ctx.send(embed=embed)
+            return
+
+        pov_name = parts[1]
+        cog = ctx.bot.get_cog('PenaltyCog')
+        league = cog.current_league if cog else "?"
+
+        thread_name_parts = ctx.channel.name.split(") ", 1)
+        prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
+        new_thread_name = f"{prefix}) Waiting for POV {pov_name}"
+
+        await ctx.channel.edit(name=new_thread_name)
+
+        if ctx.channel.id not in penalty_summary:
+            penalty_summary[ctx.channel.id] = []
+        penalty_summary[ctx.channel.id].append(f"Waiting for POV {pov_name}")
+
+        embed = discord.Embed(
+            description=f"POV requested from **{pov_name}**.",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
+
+    elif action.lower().strip() == "sug":
+        cog = ctx.bot.get_cog('PenaltyCog')
+        league = cog.current_league if cog else "?"
+        thread_name_parts = ctx.channel.name.split(") ", 1)
+        prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
+        new_thread_name = f"{prefix}) Waiting for a suggestion"
+
+        await ctx.channel.edit(name=new_thread_name)
+
+        if ctx.channel.id not in penalty_summary:
+            penalty_summary[ctx.channel.id] = []
+        penalty_summary[ctx.channel.id].append("Waiting for a suggestion")
+
+        embed = discord.Embed(
+            description=f"Thread renamed: **Waiting for a suggestion**",
             color=discord.Color.green()
         )
         await ctx.send(embed=embed)
