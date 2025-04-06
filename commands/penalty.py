@@ -219,147 +219,111 @@ async def pen_command(ctx, *, action: str):
     # Define actions that require name but reason is optional (case-insensitive)
     name_reason_actions = ["TLW", "LW", "REP", "SSIR"]
 
-    # Handle penalties with amounts (e.g., "+5S", "3GD")
-    match = re.match(r"(\+?\d+)(s|gd)\s+(\w+)(?:\s+(.*))?", action, re.IGNORECASE)
-    if match:
-        amount = match.group(1)  # Includes "+" if present
-        type_ = match.group(2).lower()  # Uniformly lowercase
-        name = match.group(3)  # Retains original casing
-        reason = match.group(4).strip() if match.group(4) else None
-
-        # Validate ranges
-        if type_ == "s" and (int(amount.lstrip('+')) < 1 or int(amount.lstrip('+')) > 30):
-            embed = discord.Embed(description="Time penalty must be between 1 and 30 seconds.", color=discord.Color.red())
-            await ctx.send(embed=embed)
-            return
-        if type_ == "gd" and (int(amount) < 1 or int(amount) > 30):
-            embed = discord.Embed(description="Grid drops must be between 1 and 30 positions.", color=discord.Color.red())
-            await ctx.send(embed=embed)
-            return
-
-        thread_name_parts = ctx.channel.name.split(") ", 1)
-        new_thread_name = (
-            f"{thread_name_parts[0]}) {amount}{type_} {name}" + (f" - {reason}" if reason else "")
-            if len(thread_name_parts) > 1
-            else f"{amount}{type_} {name}" + (f" - {reason}" if reason else "")
-        )
-        await ctx.channel.edit(name=add_tick_to_name(new_thread_name))
-
-        if ctx.channel.id not in penalty_summary:
-            penalty_summary[ctx.channel.id] = []
-        penalty_summary[ctx.channel.id].append(f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""))
-
-        # **Log successful penalty**
-        log_penalty(user, f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""), thread_name)
-
-        embed = discord.Embed(
-            description=f"Penalty applied: **{amount}{type_} {name}" + (f" - {reason}**" if reason else "**"),
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    elif action.upper().split()[0] in [a.upper() for a in name_reason_actions]:
-        parts = action.split(maxsplit=2)
-        if len(parts) < 2:
-            embed = discord.Embed(description="Invalid format. Use !pen <action> <name> *<reason> (* optional).", color=discord.Color.red())
-            await ctx.send(embed=embed)
-            return
-
-        pen = parts[0].upper()
-        name = parts[1]
-        reason = parts[2].strip() if len(parts) > 2 else None
-
-        thread_name_parts = ctx.channel.name.split(") ", 1)
-        new_thread_name = (
-            f"{thread_name_parts[0]}) {pen} {name}" + (f" - {reason}" if reason else "")
-            if len(thread_name_parts) > 1
-            else f"{pen} {name}" + (f" - {reason}" if reason else "")
-        )
-        await ctx.channel.edit(name=add_tick_to_name(new_thread_name))
-
-        if ctx.channel.id not in penalty_summary:
-            penalty_summary[ctx.channel.id] = []
-        penalty_summary[ctx.channel.id].append(f"{pen} {name}" + (f" - {reason}" if reason else ""))
-
-        # **Log successful penalty**
-        log_penalty(user, f"{pen} {name}" + (f" - {reason}" if reason else ""), thread_name)
-
-        embed = discord.Embed(
-            description=f"Penalty applied: **{pen} {name}" + (f" - {reason}**" if reason else "**"),
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    elif action.upper() in [a.upper() for a in no_reason_actions]:
-        thread_name_parts = ctx.channel.name.split(") ", 1)
-        new_thread_name = (
-            f"{thread_name_parts[0]}) {action.upper()}"
-            if len(thread_name_parts) > 1
-            else action.upper()
-        )
-        await ctx.channel.edit(name="✅" + new_thread_name)
-
-        if ctx.channel.id not in penalty_summary:
-            penalty_summary[ctx.channel.id] = []
-        penalty_summary[ctx.channel.id].append(action.upper())
-
-        # **Log successful penalty**
-        log_penalty(user, action.upper(), thread_name)
-
-        embed = discord.Embed(
-            description=f"Penalty applied: **{action.upper()}**",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    elif action.lower().startswith("pov "):
+    # Handle POV
+    if action.lower().startswith("pov "):
         parts = action.split(maxsplit=1)
         if len(parts) < 2:
-            embed = discord.Embed(description="Invalid format. Use `!pen pov <name>`.", color=discord.Color.red())
-            await ctx.send(embed=embed)
+            await ctx.send(embed=discord.Embed(description="Invalid format. Use `!pen pov <name>`.", color=discord.Color.red()))
             return
-
         pov_name = parts[1]
         cog = ctx.bot.get_cog('PenaltyCog')
         league = cog.current_league if cog else "?"
-
         thread_name_parts = ctx.channel.name.split(") ", 1)
         prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
         new_thread_name = f"{prefix}) Waiting for POV {pov_name}"
-
         await ctx.channel.edit(name=new_thread_name)
+        penalty_summary.setdefault(ctx.channel.id, []).append(f"Waiting for POV {pov_name}")
+        await ctx.send(embed=discord.Embed(description=f"POV requested from **{pov_name}**.", color=discord.Color.green()))
+        return
 
-        if ctx.channel.id not in penalty_summary:
-            penalty_summary[ctx.channel.id] = []
-        penalty_summary[ctx.channel.id].append(f"Waiting for POV {pov_name}")
-
-        embed = discord.Embed(
-            description=f"POV requested from **{pov_name}**.",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-
-    elif action.lower().strip() == "sug":
+    # Handle SUG
+    if action.lower().strip() == "sug":
         cog = ctx.bot.get_cog('PenaltyCog')
         league = cog.current_league if cog else "?"
         thread_name_parts = ctx.channel.name.split(") ", 1)
         prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
         new_thread_name = f"{prefix}) Waiting for a suggestion"
-
         await ctx.channel.edit(name=new_thread_name)
+        penalty_summary.setdefault(ctx.channel.id, []).append("Waiting for a suggestion")
+        await ctx.send(embed=discord.Embed(description="Thread renamed: **Waiting for a suggestion**", color=discord.Color.green()))
+        return
 
-        if ctx.channel.id not in penalty_summary:
-            penalty_summary[ctx.channel.id] = []
-        penalty_summary[ctx.channel.id].append("Waiting for a suggestion")
+    # Handle multiple penalties
+    penalties = [p.strip() for p in action.split(',') if p.strip()]
+    applied_penalties = []
 
-        embed = discord.Embed(
-            description=f"Thread renamed: **Waiting for a suggestion**",
-            color=discord.Color.green()
-        )
-        await ctx.send(embed=embed)
-    else:
-        embed = discord.Embed(
-            description="Invalid penalty action or format.",
-            color=discord.Color.red()
-        )
-        await ctx.send(embed=embed)
+    for penalty in penalties:
+        # Match format like: 10s Jacob or 5gd Noah [optional reason]
+        match = re.match(r"(\+?\d+)(s|gd)\s+(\w+)(?:\s+(.*))?", penalty, re.IGNORECASE)
+        if match:
+            amount = match.group(1)
+            type_ = match.group(2).lower()
+            name = match.group(3)
+            reason = match.group(4).strip() if match.group(4) else None
+
+            if type_ == "s" and not (1 <= int(amount.lstrip('+')) <= 30):
+                await ctx.send(embed=discord.Embed(description=f"Time penalty for {name} must be between 1 and 30 seconds.", color=discord.Color.red()))
+                return
+            if type_ == "gd" and not (1 <= int(amount) <= 30):
+                await ctx.send(embed=discord.Embed(description=f"Grid drop for {name} must be between 1 and 30 positions.", color=discord.Color.red()))
+                return
+
+            applied_penalties.append(f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""))
+            log_penalty(user, f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""), thread_name)
+            continue
+
+            # Add TLW penalty logic
+        match_tlw = re.match(r"(\d+)\s+TLW\s+(\w+)", penalty, re.IGNORECASE)
+        if match_tlw:
+            amount = int(match_tlw.group(1))  # The number before TLW
+            name = match_tlw.group(2)  # The name
+            reason = match_tlw.group(3).strip() if len(match_tlw.groups()) > 2 else None  # Optional reason
+
+            # Validate that the amount is between 1 and 10 for TLW
+            if not (1 <= amount <= 10):
+                await ctx.send(embed=discord.Embed(description=f"TLW penalty for {name} must be between 1 and 10.", color=discord.Color.red()))
+                return
+
+            applied_penalties.append(f"{amount} TLW {name}" + (f" - {reason}" if reason else ""))
+            log_penalty(user, f"{amount} TLW {name}" + (f" - {reason}" if reason else ""), thread_name)
+            continue
+
+
+        # Handle named actions like TLW, LW, REP, SSIR
+        parts = penalty.split(maxsplit=2)
+        if len(parts) >= 2 and parts[0].upper() in name_reason_actions:
+            pen = parts[0].upper()
+            name = parts[1]
+            reason = parts[2] if len(parts) == 3 else None
+            applied_penalties.append(f"{pen} {name}" + (f" - {reason}" if reason else ""))
+            log_penalty(user, f"{pen} {name}" + (f" - {reason}" if reason else ""), thread_name)
+            continue
+
+        # Handle simple actions like NFA, LI, etc.
+        if penalty.upper() in no_reason_actions:
+            applied_penalties.append(penalty.upper())
+            log_penalty(user, penalty.upper(), thread_name)
+            continue
+
+        # Invalid format
+        await ctx.send(embed=discord.Embed(description=f"Invalid penalty format: `{penalty}`", color=discord.Color.red()))
+        return
+
+    # Rename thread with ✅ and summary
+    thread_name_parts = ctx.channel.name.split(") ", 1)
+    prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else "?"
+    new_thread_name = f"✅ {prefix}) " + ", ".join([p.split(" - ")[0] for p in applied_penalties])
+    await ctx.channel.edit(name=new_thread_name)
+
+    # Update summary
+    penalty_summary.setdefault(ctx.channel.id, []).extend(applied_penalties)
+
+    # Send embed summary
+    embed = discord.Embed(
+        description="\n".join([f"Penalty applied: **{pen}**" for pen in applied_penalties]),
+        color=discord.Color.green()
+    )
+    await ctx.send(embed=embed)
 
 @commands.command(name='psum', help='Display the penalty summary for this thread.')
 async def pen_summary(ctx):
