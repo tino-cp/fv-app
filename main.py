@@ -32,6 +32,7 @@ from commands.nuke import nuke_command
 from commands.standings import standings_command
 from commands.results import results_command
 from commands.fastestLap import fastest_lap
+from commands.getLogs import GetLogs
 
 bot.add_command(weather)
 bot.add_command(rain)
@@ -58,6 +59,7 @@ async def on_ready():
     await bot.add_cog(LapChecks(bot))
     await bot.add_cog(PenaltyCog(bot))
     await bot.add_cog(RaceAttendance(bot))
+    await bot.add_cog(GetLogs(bot))
 
 # Start the bot with the token from your .env file
 bot.run(os.getenv('DISCORD_TOKEN'))

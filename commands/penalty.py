@@ -2,6 +2,7 @@ import asyncio
 import re
 from datetime import datetime, timedelta
 import os
+import csv
 
 import discord
 from discord.ext import commands
@@ -16,6 +17,7 @@ penalty_summary = {}
 auto_rename_threads = False
 
 LOG_FILE = "penalty_log.txt"
+CSV_LOG_FILE = "penalty_log.csv"
 
 def log_penalty(user: str, action: str, thread_name: str):
     """Append penalty details to a log file."""
@@ -23,11 +25,23 @@ def log_penalty(user: str, action: str, thread_name: str):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
+def log_penalty_csv(user: str, action_list: list[str], thread_name: str, league: str = "?"):
+    try:
+        match = re.match(r"(\w+)\s+(\d+)\)", thread_name)
+        league_from_name, thread_num = match.groups() if match else (league, "?")
+    except Exception:
+        league_from_name, thread_num = league, "?"
+
+    combined_actions = "/".join(action_list)
+
+    with open(CSV_LOG_FILE, "a", newline='', encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([league_from_name, thread_num, combined_actions, user])
+
 def add_tick_to_name(name: str) -> str:
     """Add ✅ at the start if not already present."""
     return name if name.startswith("✅") else f"✅ {name}"
 
-# ALLOWED_CHANNEL_IDS = { penalty submissions, variety submissions, testing }
 ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667, 1334666588997161074}
 
 class PenaltyCog(commands.Cog):
@@ -48,63 +62,43 @@ class PenaltyCog(commands.Cog):
 async def start_timer(ctx, league: str = None, sprint: str = None):
     global timer_message, timer_task, auto_rename_threads, thread_counter
 
-    # Validate league input
     if league not in ["F1", "F2"]:
         await ctx.send("Invalid league! Please use `!rpo F1` or `!rpo F2`.")
         return
 
-    # Reset thread counter and enable auto-renaming
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
         cog.thread_counter = 1
         cog.auto_rename_threads = True
-        cog.current_league = league  # Set the current league
+        cog.current_league = league
     thread_counter = 1
     auto_rename_threads = True
 
-    if sprint and sprint.lower() == "sprint":
-        duration = 90
-    else:
-        duration = 60
-
-    # Calculate the end time
+    duration = 90 if sprint and sprint.lower() == "sprint" else 60
     end_time = datetime.now() + timedelta(minutes=duration)
     end_time_str = to_discord_timestamp(end_time, 't')
     countdown_str = to_discord_timestamp(end_time, 'R')
 
-    # Create the embed message
     embed = discord.Embed(
         title="FIA",
-        description=(
-            "Penalty Submission window is now OPEN!\n\n"
-            ":white_small_square: Describe the incidents in the title\n"
-            ":white_small_square: Open the thread within the submission window\n"
-            ":white_small_square: @ all involved drivers\n"
-            ":white_small_square: Submit all evidence within 24h\n"
-            ":white_small_square: Leave the investigation to the FIA\n\n\n"
-            f"The submission window closes {countdown_str} at {end_time_str}"
-        ),
+        description=(f"Penalty Submission window is now OPEN!\n\n"
+                     ":white_small_square: Describe the incidents in the title\n"
+                     ":white_small_square: Open the thread within the submission window\n"
+                     ":white_small_square: @ all involved drivers\n"
+                     ":white_small_square: Submit all evidence within 24h\n"
+                     ":white_small_square: Leave the investigation to the FIA\n\n\n"
+                     f"The submission window closes {countdown_str} at {end_time_str}"),
         color=discord.Color.gold()
     )
     embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
-
-    # Send the initial timer message
     timer_message = await ctx.send(embed=embed)
-
-    # Start the timer task
     timer_task = asyncio.create_task(wait_and_close_timer(ctx, end_time))
-
-    # Create a thread and rename it
     thread = await ctx.channel.create_thread(name=f"{league} {thread_counter})")
     thread_counter += 1
 
 async def wait_and_close_timer(ctx, end_time):
     global auto_rename_threads
-
-    # Wait for 60 minutes
     await asyncio.sleep(60 * 60)
-
-    # After 60 minutes, disable auto-renaming and close the timer
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
         cog.auto_rename_threads = False
@@ -114,30 +108,17 @@ async def wait_and_close_timer(ctx, end_time):
 
 async def update_timer_message():
     global timer_message
-
     if timer_message:
-        # Update the embed message to show the window is closed
         embed = discord.Embed(
             title="FIA",
-            description=(
-                "Penalty Submission window is now OPEN!\n\n"
-                ":white_small_square: Describe the incidents in the title\n"
-                ":white_small_square: Open the thread within the submission window\n"
-                ":white_small_square: @ all involved drivers\n"
-                ":white_small_square: Submit all evidence within 24h\n"
-                ":white_small_square: Leave the investigation to the FIA\n\n\n"
-            ),
+            description="Penalty Submission window is now OPEN!",
             color=discord.Color.gold()
         )
         embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
-
-        # Edit the original message
         await timer_message.edit(embed=embed)
 
 async def close_timer(ctx, end_time):
     global thread_counter, auto_rename_threads
-
-    # Reset thread counter when the timer is closed
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
         cog.thread_counter = 1
@@ -145,115 +126,98 @@ async def close_timer(ctx, end_time):
     auto_rename_threads = False
     thread_counter = 1
 
-    # Create the embed message
     embed = discord.Embed(
         title="FIA",
-        description=(
-            "Penalty Submission window is now CLOSED!\n\n"
-            "Abbreviations:\n"
-            ":white_small_square: TLW - Track limit warning (4th = penalty)\n"
-            ":white_small_square: LW - Lag warning (3rd = penalty)\n"
-            ":white_small_square: LI - Incident involving lag was judged by the stewards not worth a penalty\n"
-            ":white_small_square: REP - Reprimand (3rd = grid drop)\n"
-            ":white_small_square: Xs - Time penalty\n"
-            ":white_small_square: GD - Grid drop\n"
-            ":white_small_square: NFA - Evidence provided but not worthy for steward action\n"
-            ":white_small_square: NFI - No evidence provided to the FIA\n"
-            ":white_small_square: RI - Incident was judged by the stewards not worth a penalty\n"
-            ":white_small_square: SSIR - Incident was self-served in race\n\n\n"
-            f"The submission window closed at {to_discord_timestamp(end_time, 't')}"
-        ),
+        description=(f"Penalty Submission window is now CLOSED!\n\n"
+                     "Abbreviations:\n"
+                     ":white_small_square: TLW - Track limit warning (4th = penalty)\n"
+                     ":white_small_square: LW - Lag warning (3rd = penalty)\n"
+                     ":white_small_square: LI - Incident involving lag was judged by the stewards not worth a penalty\n"
+                     ":white_small_square: REP - Reprimand (3rd = grid drop)\n"
+                     ":white_small_square: Xs - Time penalty\n"
+                     ":white_small_square: GD - Grid drop\n"
+                     ":white_small_square: NFA - Evidence provided but not worthy for steward action\n"
+                     ":white_small_square: NFI - No evidence provided to the FIA\n"
+                     ":white_small_square: RI - Incident was judged by the stewards not worth a penalty\n"
+                     ":white_small_square: SSIR - Incident was self-served in race\n\n"
+                     f"The submission window closed at {to_discord_timestamp(end_time, 't')}"),
         color=discord.Color.gold()
     )
     embed.set_thumbnail(url="https://i.ibb.co/GVs75Rk/FV-trans-Square.png")
-
-    # Send the closed timer message
     await ctx.send(embed=embed)
 
 @commands.command(name='cancel', help='Cancel the ongoing timer.')
 async def cancel_timer(ctx):
     global timer_task, timer_message, auto_rename_threads, thread_counter
-
     if timer_task and not timer_task.done():
         timer_task.cancel()
-
         cog = ctx.bot.get_cog('PenaltyCog')
         if cog:
             cog.thread_counter = 1
             cog.auto_rename_threads = False
         auto_rename_threads = False
         thread_counter = 1
-
-        embed = discord.Embed(
-            title="Timer Cancelled",
-            description="The penalty submission timer has been cancelled.",
-            color=discord.Color.red()
-        )
+        embed = discord.Embed(title="Timer Cancelled", description="The penalty submission timer has been cancelled.", color=discord.Color.red())
         await ctx.send(embed=embed)
     else:
-        embed = discord.Embed(
-            title="No Active Timer",
-            description="There is no ongoing timer to cancel.",
-            color=discord.Color.orange()
-        )
+        embed = discord.Embed(title="No Active Timer", description="There is no ongoing timer to cancel.", color=discord.Color.orange())
         await ctx.send(embed=embed)
 
 @commands.command(name='pen', help='Apply a penalty to the current thread.')
 async def pen_command(ctx, *, action: str):
     global penalty_summary
-
     if not isinstance(ctx.channel, discord.Thread):
-        embed = discord.Embed(
-            title="Invalid Channel",
-            description="This command can only be used in a thread.",
-            color=discord.Color.orange()
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=discord.Embed(title="Invalid Channel", description="This command can only be used in a thread.", color=discord.Color.orange()))
         return
 
     thread_name = ctx.channel.name
     user = ctx.author.display_name
+    cog = ctx.bot.get_cog('PenaltyCog')
+    league = cog.current_league if cog else "?"
 
-    # Define no-reason actions (case-insensitive)
-    no_reason_actions = ["NFA", "NFI", "LI", "RI"]
-    # Define actions that require name but reason is optional (case-insensitive)
+    no_reason_actions = ["NFA", "NFI", "LI", "RI", "NFH"]
     name_reason_actions = ["TLW", "LW", "REP", "SSIR"]
-
-    # Handle POV
     if action.lower().startswith("pov "):
         parts = action.split(maxsplit=1)
         if len(parts) < 2:
             await ctx.send(embed=discord.Embed(description="Invalid format. Use `!pen pov <name>`.", color=discord.Color.red()))
             return
         pov_name = parts[1]
-        cog = ctx.bot.get_cog('PenaltyCog')
-        league = cog.current_league if cog else "?"
         thread_name_parts = ctx.channel.name.split(") ", 1)
         prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
         new_thread_name = f"{prefix}) Waiting for POV {pov_name}"
-        await ctx.channel.edit(name=new_thread_name)
+        try:
+            await ctx.channel.edit(name=new_thread_name)
+        except discord.HTTPException as e:
+            if e.status == 429:
+                await ctx.send("⚠️ Discord is rate limiting thread renames. Please wait a moment.")
+                await asyncio.sleep(10)
+            else:
+                raise
         penalty_summary.setdefault(ctx.channel.id, []).append(f"Waiting for POV {pov_name}")
         await ctx.send(embed=discord.Embed(description=f"POV requested from **{pov_name}**.", color=discord.Color.green()))
         return
 
-    # Handle SUG
     if action.lower().strip() == "sug":
-        cog = ctx.bot.get_cog('PenaltyCog')
-        league = cog.current_league if cog else "?"
         thread_name_parts = ctx.channel.name.split(") ", 1)
         prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else f"{league} ?"
         new_thread_name = f"{prefix}) Waiting for a suggestion"
-        await ctx.channel.edit(name=new_thread_name)
+        try:
+            await ctx.channel.edit(name=new_thread_name)
+        except discord.HTTPException as e:
+            if e.status == 429:
+                await ctx.send("⚠️ Discord is rate limiting thread renames. Please wait a moment.")
+                await asyncio.sleep(10)
+            else:
+                raise
         penalty_summary.setdefault(ctx.channel.id, []).append("Waiting for a suggestion")
         await ctx.send(embed=discord.Embed(description="Thread renamed: **Waiting for a suggestion**", color=discord.Color.green()))
         return
 
-    # Handle multiple penalties
     penalties = [p.strip() for p in action.split(',') if p.strip()]
     applied_penalties = []
 
     for penalty in penalties:
-        # Match format like: 10s Jacob or 5gd Noah [optional reason]
         match = re.match(r"(\+?\d+)(s|gd)\s+(\w+)(?:\s+(.*))?", penalty, re.IGNORECASE)
         if match:
             amount = match.group(1)
@@ -268,87 +232,65 @@ async def pen_command(ctx, *, action: str):
                 await ctx.send(embed=discord.Embed(description=f"Grid drop for {name} must be between 1 and 30 positions.", color=discord.Color.red()))
                 return
 
-            applied_penalties.append(f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""))
-            log_penalty(user, f"{amount}{type_} {name}" + (f" - {reason}" if reason else ""), thread_name)
+            full = f"{amount}{type_} {name}" + (f" - {reason}" if reason else "")
+            applied_penalties.append(full)
+            log_penalty_csv(user, applied_penalties, thread_name, cog.current_league if cog else "?")
             continue
 
-            # Add TLW penalty logic
         match_tlw = re.match(r"(\d+)\s+TLW\s+(\w+)", penalty, re.IGNORECASE)
         if match_tlw:
-            amount = int(match_tlw.group(1))  # The number before TLW
-            name = match_tlw.group(2)  # The name
-            reason = match_tlw.group(3).strip() if len(match_tlw.groups()) > 2 else None  # Optional reason
-
-            # Validate that the amount is between 1 and 10 for TLW
+            amount = int(match_tlw.group(1))
+            name = match_tlw.group(2)
             if not (1 <= amount <= 10):
                 await ctx.send(embed=discord.Embed(description=f"TLW penalty for {name} must be between 1 and 10.", color=discord.Color.red()))
                 return
-
-            applied_penalties.append(f"{amount} TLW {name}" + (f" - {reason}" if reason else ""))
-            log_penalty(user, f"{amount} TLW {name}" + (f" - {reason}" if reason else ""), thread_name)
+            full = f"{amount} TLW {name}"
+            applied_penalties.append(full)
+            log_penalty_csv(user, applied_penalties, thread_name, cog.current_league if cog else "?")
             continue
 
-
-        # Handle named actions like TLW, LW, REP, SSIR
         parts = penalty.split(maxsplit=2)
         if len(parts) >= 2 and parts[0].upper() in name_reason_actions:
             pen = parts[0].upper()
             name = parts[1]
             reason = parts[2] if len(parts) == 3 else None
-            applied_penalties.append(f"{pen} {name}" + (f" - {reason}" if reason else ""))
-            log_penalty(user, f"{pen} {name}" + (f" - {reason}" if reason else ""), thread_name)
+            full = f"{pen} {name}" + (f" - {reason}" if reason else "")
+            applied_penalties.append(full)
+            log_penalty_csv(user, applied_penalties, thread_name, cog.current_league if cog else "?")
+
             continue
 
-        # Handle simple actions like NFA, LI, etc.
         if penalty.upper() in no_reason_actions:
             applied_penalties.append(penalty.upper())
-            log_penalty(user, penalty.upper(), thread_name)
+            log_penalty_csv(user, applied_penalties, thread_name, cog.current_league if cog else "?")
+
             continue
 
-        # Invalid format
         await ctx.send(embed=discord.Embed(description=f"Invalid penalty format: `{penalty}`", color=discord.Color.red()))
         return
 
-    # Rename thread with ✅ and summary
-    thread_name_parts = ctx.channel.name.split(") ", 1)
-    prefix = thread_name_parts[0] if len(thread_name_parts) > 1 else "?"
+    prefix = ctx.channel.name.split(") ", 1)[0]
     new_thread_name = f"✅ {prefix}) " + ", ".join([p.split(" - ")[0] for p in applied_penalties])
-    await ctx.channel.edit(name=new_thread_name)
-
-    # Update summary
+    try:
+        await ctx.channel.edit(name=new_thread_name)
+    except discord.HTTPException as e:
+        if e.status == 429:
+            await ctx.send("⚠️ Discord is rate limiting thread renames. Please wait a moment.")
+            await asyncio.sleep(10)
+        else:
+            raise
     penalty_summary.setdefault(ctx.channel.id, []).extend(applied_penalties)
-
-    # Send embed summary
-    embed = discord.Embed(
-        description="\n".join([f"Penalty applied: **{pen}**" for pen in applied_penalties]),
-        color=discord.Color.green()
-    )
+    embed = discord.Embed(description="\n".join([f"Penalty applied: **{pen}**" for pen in applied_penalties]), color=discord.Color.green())
     await ctx.send(embed=embed)
 
 @commands.command(name='psum', help='Display the penalty summary for this thread.')
 async def pen_summary(ctx):
     if not isinstance(ctx.channel, discord.Thread):
-        embed = discord.Embed(
-            title="Invalid Channel",
-            description="This command can only be used in a thread.",
-            color=discord.Color.orange()
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=discord.Embed(title="Invalid Channel", description="This command can only be used in a thread.", color=discord.Color.orange()))
         return
-
     if ctx.channel.id not in penalty_summary or not penalty_summary[ctx.channel.id]:
-        embed = discord.Embed(
-            title="No Penalties",
-            description="No penalties applied to this thread yet.",
-            color=discord.Color.orange()
-        )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=discord.Embed(title="No Penalties", description="No penalties applied to this thread yet.", color=discord.Color.orange()))
         return
-
     summary = "\n".join(penalty_summary[ctx.channel.id])
-    embed = discord.Embed(
-        title="Penalty Summary",
-        description=summary,
-        color=discord.Color.blue()
-    )
+    embed = discord.Embed(title="Penalty Summary", description=summary, color=discord.Color.blue())
     await ctx.send(embed=embed)

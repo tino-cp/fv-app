@@ -98,7 +98,8 @@ async def show_help(ctx):
             "- `xGD`: x-Grid Drop Penalty\n\n"
             "`!pen <action> [reason]`\n"
             "- `NFA`: No Further Action\n"
-            "- `NFI`: No Further Investigation\n"
+            "- `NFI`: No Further Investigation - this will not get logged\n"
+            "- `NFH`: Nothing fucking happened - this will not get logged\n"
             "- `LI`: Lag Incident\n"
             "- `RI`: Racing Incident\n\n"
             "**Examples**:\n"
@@ -110,10 +111,28 @@ async def show_help(ctx):
         inline=False
     )
 
+    # Logs Commands
+    embed.add_field(
+        name="**---------**__**LOGS COMMANDS**__**---------**",
+        value=(
+            "`!pen getLogs`\n"
+            "- Retrieve and send the penalty log file.\n\n"
+            "`!pen clearLogs`\n"
+            "- Clear all entries in the penalty log.\n\n"
+            "`!pen filterLogs`\n"
+            "- Filter the logs to keep only the most recent entry for each league and thread.\n\n"
+            "`!pen sortLogs`\n"
+            "- Sort the logs by league and thread counter in ascending order.\n\n"
+        ),
+        inline=False
+    )
+
     # Race Attendance Commands
     embed.add_field(
         name="**---------**__**RACE ATTENDANCE COMMANDS**__**---------**",
         value=(
+            "`!RA <Track name>`\n"
+            "Creates an attendance form for the entire weekend.\n\n"
             "`!RAF1 or !RAF2`\n"
             "Creates an attendance form for the specified League.\n\n"
             "`!reset F1 or !reset F2`\n"
