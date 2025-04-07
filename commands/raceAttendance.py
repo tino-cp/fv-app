@@ -62,6 +62,15 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RA")
     async def race_attendance(self, ctx, *, track_name: str):
+        
+    # ✅ Role check
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return        
+        
         """Handles race attendance for both F1 and F2 with the track name."""
         
         # Send first title message for F1

@@ -27,7 +27,7 @@ def save_protests(data):
 
 @commands.command(name="protest", help="Submit a protest for a team.")
 async def protest_command(ctx, team: str):  
-    allowed_roles = {"Academy CEO", "Formula 1", "Formula 2", "F2 Team Manager ", "F1 Team Principal"}
+    allowed_roles = {"Academy CEO", "F2 Team Manager ", "F1 Team Principal"}
     user_roles = {role.name for role in ctx.author.roles}
 
     if not allowed_roles.intersection(user_roles):

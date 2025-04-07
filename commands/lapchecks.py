@@ -30,6 +30,15 @@ class LapChecks(commands.Cog):
 
     @commands.command(name='lapchecks', help='Roll out lap checks for all positions (1-20) using the adjusted formula.')
     async def lapchecks(self, ctx):
+        
+        # ✅ Role check
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return        
+        
         """
         Command to roll out lap checks for all positions using the adjusted formula.
         """

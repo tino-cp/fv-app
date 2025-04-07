@@ -60,6 +60,14 @@ class PenaltyCog(commands.Cog):
 
 @commands.command(name='rpo', help='Start a 60-minute timer and display the status.')
 async def start_timer(ctx, league: str = None, sprint: str = None):
+    # ✅ Role check
+    allowed_roles = ["Admin", "Steward"]
+    user_roles = [role.name for role in ctx.author.roles]
+
+    if not any(role in user_roles for role in allowed_roles):
+        await ctx.send("🚫 You do not have permission to use this command.")
+        return
+    
     global timer_message, timer_task, auto_rename_threads, thread_counter
 
     if league not in ["F1", "F2"]:
@@ -148,6 +156,14 @@ async def close_timer(ctx, end_time):
 
 @commands.command(name='cancel', help='Cancel the ongoing timer.')
 async def cancel_timer(ctx):
+    # ✅ Role check
+    allowed_roles = ["Admin", "Steward"]
+    user_roles = [role.name for role in ctx.author.roles]
+
+    if not any(role in user_roles for role in allowed_roles):
+        await ctx.send("🚫 You do not have permission to use this command.")
+        return    
+    
     global timer_task, timer_message, auto_rename_threads, thread_counter
     if timer_task and not timer_task.done():
         timer_task.cancel()
@@ -165,6 +181,15 @@ async def cancel_timer(ctx):
 
 @commands.command(name='pen', help='Apply a penalty to the current thread.')
 async def pen_command(ctx, *, action: str):
+    
+    # ✅ Role check
+    allowed_roles = ["Admin", "Steward"]
+    user_roles = [role.name for role in ctx.author.roles]
+
+    if not any(role in user_roles for role in allowed_roles):
+        await ctx.send("🚫 You do not have permission to use this command.")
+        return    
+    
     global penalty_summary
     if not isinstance(ctx.channel, discord.Thread):
         await ctx.send(embed=discord.Embed(title="Invalid Channel", description="This command can only be used in a thread.", color=discord.Color.orange()))
