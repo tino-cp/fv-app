@@ -18,8 +18,10 @@ async def show_help(ctx):
         value=(
             "`!regs` - Prints out link to regulations\n"
             "`!df` - Prints out downforce setting for each formula car\n\n"
-            "`!standings <F1> <F2>`\n"
-            "Prints out standings from the spreadsheet\n\n"
+            "`!standings <F1><c> <F2><c>`\n"
+            "Prints out standings from the spreadsheet\n"
+            "f.e. `!standings F1` for drivers standings\n"
+            "f.e. `!standings F2C` for teams standings\n\n"
             "`!weather`\n"
             "- Get the current weather conditions for the location.\n\n"
             "`!rain`\n"
