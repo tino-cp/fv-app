@@ -32,7 +32,7 @@ async def protest_command(ctx, team: str):
 
     if not allowed_roles.intersection(user_roles):
         embed = discord.Embed(
-            description="❌ You do not have permission to use this command. Only Head Stewards and Academy CEOs can submit protests.",
+            description="❌ You do not have permission to use this command. Only Academy CEO, F2 Team Manager and F1 Team Principal can submit protests.\n\n Ping and ask your manager to open a protest for you.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
@@ -70,11 +70,30 @@ async def protest_command(ctx, team: str):
     save_protests(protests)
 
     embed = discord.Embed(
-        title="Protest Submitted",
-        description=f"✅ {team} has submitted a protest.\n\n[Create a ticket here](https://discord.com/channels/843175947304960020/982599539414413332/1003349125699477574)",
+        title="📣 Protest Submitted",
+        description=(
+            f"✅ **{team} has submitted a protest.**\n\n"
+            f"👉 **[🟨 CLICK HERE TO CREATE A TICKET 🟨](https://discord.com/channels/843175947304960020/982599539414413332/1003349125699477574)**\n\n"
+            f"Please provide all evidence and context in the ticket channel for stewards to review."
+        ),
         color=discord.Color.gold()
     )
     await ctx.send(embed=embed)
+    if isinstance(ctx.channel, discord.Thread):
+        old_name = ctx.channel.name
+
+        # Match format: ✅ F1 4) NFA or F1 4) NFA
+        import re
+        match = re.match(r"(?:✅\s*)?([A-Z0-9]+)\s+(\d+)\)", old_name)
+        if match:
+            league = match.group(1)
+            counter = match.group(2)
+            new_name = f"{league} {counter}) PROTEST ONGOING"
+
+            try:
+                await ctx.channel.edit(name=new_name)
+            except discord.errors.HTTPException:
+                await ctx.send("⚠️ Could not rename the thread due to rate limits or permissions.")
 
 @commands.command(name="revertProtest", help="Revert the last protest for a team (Head Stewards only).")
 async def revert_protest_command(ctx, team: str):  

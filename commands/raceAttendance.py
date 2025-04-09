@@ -32,7 +32,25 @@ TEAMS_F2 = {
     "PREMA": "<:prema:1275285925206818836>",
     "DAMS": "<:dams:1275285918743265362>",
     "ART": "<:ART:1275285915366985788>",
-    "Rodin": "<:rodin:1275285926792400926>",
+    "AIX": "<:aix:1275285913685065759>",
+    "Trident": "<:Trident:1272194719778213889>",
+    "VAR": "<:var:1275285966894010419>",
+    "FIA Race director": "<:fia:927351199387234386>",
+    "FIA safety car": "<:fia:927351199387234386>",
+    "Not attending": "❌",
+    "Dont know yet": "❓",
+    "Spectator": "👀",
+    "Reserve drivers": "<:reserve:1335001794719518830>"
+}
+
+TEAMS_F3 = {
+    "Invicta": "<:invicta:1275285922266742926>",
+    "MP": "<:mp:1275285923785080946>",
+    "Hitech": "<:hitech:1275285920639221807>",
+    "Campos": "<:campos:1275285917187178539>",
+    "PREMA": "<:prema:1275285925206818836>",
+    "DAMS": "<:dams:1275285918743265362>",
+    "ART": "<:ART:1275285915366985788>",
     "AIX": "<:aix:1275285913685065759>",
     "Trident": "<:Trident:1272194719778213889>",
     "VAR": "<:var:1275285966894010419>",
@@ -48,7 +66,8 @@ class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.refresh_views.start()
-        self.attendance_files = {"F1": "attendance_f1.json", "F2": "attendance_f2.json"}
+        self.attendance_files = {"F1": "attendance_f1.json", "F2": "attendance_f2.json", "F3": "attendance_f3.json"}
+
 
     def load_attendance(self, category):
         if os.path.exists(self.attendance_files[category]):
@@ -87,6 +106,14 @@ class RaceAttendance(commands.Cog):
         # Call the RAF2 command
         await self.race_attendance_f2(ctx)
 
+        # F3 Section
+        emoji_f3 = "<:FV3:1070247353916870668>"  # Replace with your F3 emoji
+        await ctx.send(f"# {emoji_f3} {track_name} {emoji_f3}")
+        
+        # Call the RAF3 command
+        await self.race_attendance_f3(ctx)
+
+
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
         self.save_attendance("F1", {})
@@ -97,11 +124,16 @@ class RaceAttendance(commands.Cog):
         self.save_attendance("F2", {})
         await self.send_attendance_message(ctx, "F2")
 
+    @commands.command(name="RAF3")
+    async def race_attendance_f3(self, ctx):
+        self.save_attendance("F3", {})
+        await self.send_attendance_message(ctx, "F3")
+
     @commands.command(name="reset")
     async def reset_attendance(self, ctx, category: str):
         """Resets the attendance for the given category (F1 or F2)."""
-        if category not in ["F1", "F2"]:
-            await ctx.send("Invalid category! Use `F1` or `F2`.")
+        if category not in ["F1", "F2", "F3"]:
+            await ctx.send("Invalid category! Use `F1`, `F2`, or `F3`.")
             return
         
         # Clear the attendance file
@@ -133,7 +165,12 @@ class RaceAttendance(commands.Cog):
         return message
 
     def create_embed(self, category, guild=None):
-        teams = TEAMS_F1 if category == "F1" else TEAMS_F2
+        if category == "F1":
+            teams = TEAMS_F1
+        elif category == "F2":
+            teams = TEAMS_F2
+        else:
+            teams = TEAMS_F3
         attendance_data = self.load_attendance(category)
         embed = discord.Embed(
             title=f"Race Attendance {category}",
@@ -184,7 +221,7 @@ class RaceAttendance(commands.Cog):
     @tasks.loop(minutes=2)
     async def refresh_views(self):
         await self.bot.wait_until_ready()
-        for category in ["F1", "F2"]:
+        for category in ["F1", "F2", "F3"]:
             try:
                 with open(f"attendance_{category}_message.json", "r") as f:
                     data = json.load(f)
@@ -201,7 +238,12 @@ class RaceAttendance(commands.Cog):
 
     def create_view(self, category):
         view = View(timeout=None)  # Prevent view from expiring
-        teams = TEAMS_F1 if category == "F1" else TEAMS_F2
+        if category == "F1":
+            teams = TEAMS_F1
+        elif category == "F2":
+            teams = TEAMS_F2
+        else:
+            teams = TEAMS_F3
         for team in teams:
             button = Button(label=team, style=discord.ButtonStyle.primary, custom_id=f"{category}_{team}")
             button.callback = self.button_callback
