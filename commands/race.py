@@ -18,8 +18,8 @@ async def race(ctx, series: str = None, race_round: str = None):
 
     # Define base start dates for regular races
     base_race_start_dates = {
-        "f1": datetime(2025, 1, 5, 19, 0, tzinfo=dt_timezone.utc),
-        "f2": datetime(2025, 1, 4, 18, 0, tzinfo=dt_timezone.utc)
+        "f1": datetime(2025, 1, 5, 18, 0, tzinfo=dt_timezone.utc),
+        "f2": datetime(2025, 1, 4, 17, 0, tzinfo=dt_timezone.utc)
     }
 
     # Define sprint races that start 30 minutes earlier

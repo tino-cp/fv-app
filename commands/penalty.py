@@ -78,8 +78,9 @@ async def start_timer(ctx, league: str = None, sprint: str = None):
     
     global timer_message, timer_task, auto_rename_threads, thread_counter
 
-    if league not in ["F1", "F2"]:
-        await ctx.send("Invalid league! Please use `!rpo F1` or `!rpo F2`.")
+    # Modify league check to include F3 and General
+    if league not in ["F1", "F2", "F3", "general"]:
+        await ctx.send("Invalid league! Please use `!rpo F1`, `!rpo F2`, `!rpo F3`, or `!rpo general`.")
         return
 
     cog = ctx.bot.get_cog('PenaltyCog')
