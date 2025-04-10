@@ -38,12 +38,12 @@ async def protest_command(ctx, team: str):
         return
 
     
-    allowed_roles = {"Academy CEO", "F2 Team Manager ", "F1 Team Principal"}
+    allowed_roles = {"Academy CEO", "F2 Team Manager ", "F1 Team Principal", "Academy Manager"}
     user_roles = {role.name for role in ctx.author.roles}
 
     if not allowed_roles.intersection(user_roles):
         embed = discord.Embed(
-            description="❌ You do not have permission to use this command. Only Academy CEO, F2 Team Manager and F1 Team Principal can submit protests.\n\n Ping and ask your manager to open a protest for you.",
+            description="❌ You do not have permission to use this command. Only Academy Manager, F2 Team Manager and F1 Team Principal can submit protests.\n\n Ping and ask your manager to open a protest for you.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
