@@ -4,6 +4,12 @@ from discord.ui import Button, View
 import json
 import os
 
+# Get server IDs as a set of integers
+ALLOWED_SERVER_IDS = set(
+    int(id.strip()) for id in os.getenv("ALLOWED_SERVER_IDS", "").split(",") if id.strip()
+)
+
+
 # The dictionary of teams and the corresponding emoji for each (add more as needed)
 TEAMS_F1 = {
     "Aston Martin": "<:ast:1274844727757246586>",
@@ -79,8 +85,11 @@ class RaceAttendance(commands.Cog):
         with open(self.attendance_files[category], 'w') as f:
             json.dump(data, f, indent=4)
 
-    @commands.command(name="RA")
+    @commands.command(name="RA")    
     async def race_attendance(self, ctx, *, track_name: str):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
         
     # ✅ Role check
         allowed_roles = ["Admin", "Steward"]
@@ -116,21 +125,33 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return        
         self.save_attendance("F1", {})
         await self.send_attendance_message(ctx, "F1")
 
     @commands.command(name="RAF2")
     async def race_attendance_f2(self, ctx):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
         self.save_attendance("F2", {})
         await self.send_attendance_message(ctx, "F2")
 
     @commands.command(name="RAF3")
     async def race_attendance_f3(self, ctx):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return    
         self.save_attendance("F3", {})
         await self.send_attendance_message(ctx, "F3")
 
     @commands.command(name="reset")
     async def reset_attendance(self, ctx, category: str):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
         """Resets the attendance for the given category (F1 or F2)."""
         if category not in ["F1", "F2", "F3"]:
             await ctx.send("Invalid category! Use `F1`, `F2`, or `F3`.")

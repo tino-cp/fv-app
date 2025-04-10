@@ -9,6 +9,11 @@ from discord.ext import commands
 
 from utils.weather_utils import to_discord_timestamp
 
+# Get server IDs as a set of integers
+ALLOWED_SERVER_IDS = set(
+    int(id.strip()) for id in os.getenv("ALLOWED_SERVER_IDS", "").split(",") if id.strip()
+)
+
 # Global variables
 timer_message = None
 timer_task = None
@@ -60,6 +65,9 @@ class PenaltyCog(commands.Cog):
 
 @commands.command(name='rpo', help='Start a 60-minute timer and display the status.')
 async def start_timer(ctx, league: str = None, sprint: str = None):
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
     # ✅ Role check
     allowed_roles = ["Admin", "Steward"]
     user_roles = [role.name for role in ctx.author.roles]
@@ -156,6 +164,9 @@ async def close_timer(ctx, end_time):
 
 @commands.command(name='cancel', help='Cancel the ongoing timer.')
 async def cancel_timer(ctx):
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
     # ✅ Role check
     allowed_roles = ["Admin", "Steward"]
     user_roles = [role.name for role in ctx.author.roles]
@@ -181,7 +192,9 @@ async def cancel_timer(ctx):
 
 @commands.command(name='pen', help='Apply a penalty to the current thread.')
 async def pen_command(ctx, *, action: str):
-    
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
     # ✅ Role check
     allowed_roles = ["Admin", "Steward"]
     user_roles = [role.name for role in ctx.author.roles]
@@ -310,6 +323,9 @@ async def pen_command(ctx, *, action: str):
 
 @commands.command(name='psum', help='Display the penalty summary for this thread.')
 async def pen_summary(ctx):
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
     if not isinstance(ctx.channel, discord.Thread):
         await ctx.send(embed=discord.Embed(title="Invalid Channel", description="This command can only be used in a thread.", color=discord.Color.orange()))
         return

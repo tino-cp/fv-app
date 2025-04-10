@@ -2,6 +2,11 @@ import discord
 from discord.ext import commands
 import os
 
+# Get server IDs as a set of integers
+ALLOWED_SERVER_IDS = set(
+    int(id.strip()) for id in os.getenv("ALLOWED_SERVER_IDS", "").split(",") if id.strip()
+)
+
 class GetLogs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -29,6 +34,11 @@ class GetLogs(commands.Cog):
 
     @commands.command(name="clearLogs")
     async def clear_logs(self, ctx):
+
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return    
+        
         allowed_roles = ["Admin", "Steward"]
         user_roles = [role.name for role in ctx.author.roles]
 
@@ -50,6 +60,11 @@ class GetLogs(commands.Cog):
 
     @commands.command(name="filterLogs")
     async def filter_logs(self, ctx):
+        
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return    
+        
         allowed_roles = ["Admin", "Steward"]
         user_roles = [role.name for role in ctx.author.roles]
 

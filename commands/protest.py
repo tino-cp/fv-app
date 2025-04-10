@@ -4,6 +4,11 @@ import json
 import os
 from datetime import datetime
 
+# Get server IDs as a set of integers
+ALLOWED_SERVER_IDS = set(
+    int(id.strip()) for id in os.getenv("ALLOWED_SERVER_IDS", "").split(",") if id.strip()
+)
+
 PROTESTS_FILE = "protests.json"  # File where protests are stored
 MAX_PROTESTS = 3  # Maximum protests per team
 
@@ -27,6 +32,12 @@ def save_protests(data):
 
 @commands.command(name="protest", help="Submit a protest for a team.")
 async def protest_command(ctx, team: str):  
+    
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
+
+    
     allowed_roles = {"Academy CEO", "F2 Team Manager ", "F1 Team Principal"}
     user_roles = {role.name for role in ctx.author.roles}
 
@@ -97,6 +108,10 @@ async def protest_command(ctx, team: str):
 
 @commands.command(name="revertProtest", help="Revert the last protest for a team (Head Stewards only).")
 async def revert_protest_command(ctx, team: str):  
+    if ctx.guild.id not in ALLOWED_SERVER_IDS:
+        await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+        return
+    
     allowed_roles = {"Admin", "Owner", "Steward"}
     user_roles = {role.name for role in ctx.author.roles}
 
