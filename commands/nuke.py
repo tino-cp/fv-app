@@ -3,13 +3,24 @@ from discord.ext import commands
 
 @commands.command(name="nuke", help="Send a funny nuke GIF.")
 async def nuke_command(ctx):
-    gif_url = "https://media1.tenor.com/m/aH1MG0AZMBsAAAAC/sabrina-the-teenage-witch-salem.gif"  # Funny nuke GIF
+    with open("gif/idk-angry-emoji.gif", "rb") as gif_file:
+        file = discord.File(gif_file, filename="idk-angry-emoji.gif")
+        embed = discord.Embed(
+            title="Care to explain yourself?",
+            description="are you from GTR? 🤔",
+            color=discord.Color.red()
+        )
+        embed.set_image(url=f"attachment://{file.filename}")
+        await ctx.send(embed=embed, file=file)
 
-    embed = discord.Embed(
-        title="Care to explain yourself?",
-        description="are you from GTR? 🤔",
-        color=discord.Color.red()
-    )
-    embed.set_image(url=gif_url)
-
-    await ctx.send(embed=embed)
+@commands.command()
+async def delta(ctx):
+    with open("gif/revive-hes-alive.gif", "rb") as gif_file:
+        file = discord.File(gif_file, filename="revive-hes-alive.gif")
+        embed = discord.Embed(
+            title="Delta",
+            description="Coming soon...",
+            color=discord.Color.blue()
+        )
+        embed.set_image(url=f"attachment://{file.filename}")
+        await ctx.send(embed=embed, file=file)

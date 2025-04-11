@@ -28,13 +28,14 @@ from commands.raceAttendance import RaceAttendance
 from commands.regs import regs
 from commands.downforce import downforce
 from commands.protest import protest_command, protests_command, revert_protest_command
-from commands.nuke import nuke_command
+from commands.nuke import nuke_command, delta
 from commands.standings import standings_command
 from commands.results import results_command
 from commands.fastestLap import fastest_lap
 from commands.getLogs import GetLogs
 from commands.trainees import TraineeCog
 
+bot.add_command(delta)
 bot.add_command(weather)
 bot.add_command(rain)
 bot.add_command(race)
