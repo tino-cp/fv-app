@@ -63,6 +63,24 @@ async def show_help(ctx):
         inline=False
     )
 
+    # Trainee Steward Commands
+    embed.add_field(
+        name="**---------**__**TRAINEE STEWARD COMMANDS**__**---------**",
+        value=(
+            "`!suggestion <reason>`\n"
+            "- Log a suggestion for a penalty in the current penalty thread.\n"
+            "- Example: `!suggestion I think this driver deserves a 10s penalty for cutting the corner.`\n\n"
+            "`!approve`\n"
+            "- Used by stewards to approve a suggestion made by a trainee.\n"
+            "- Reply to a suggestion and use this command to approve it.\n"
+            "- Logs the suggestion as approved with the steward’s name.\n\n"
+            "`!list_suggestions`\n"
+            "- Retrieves a list of all logged trainee suggestions in CSV format.\n"
+            "- Only available to stewards or admins.\n\n\n\n"  # Two empty lines
+        ),
+        inline=False
+    )
+
     # Protests Commands
     embed.add_field(
         name="**---------**__**PROTESTS**__**---------**",
