@@ -63,11 +63,12 @@ class PenaltyCog(commands.Cog):
             await thread.edit(name=new_thread_name)
             self.thread_counter += 1
 
-@commands.command(name='rpo', help='Start a 60-minute timer and display the status.')
-async def start_timer(ctx, league: str = None, sprint: str = None):
+@commands.command(name='rpo', help='Start a timer and display the status (can specify duration).')
+async def start_timer(ctx, league: str = None, sprint: str = None, duration: int = 60):
     if ctx.guild.id not in ALLOWED_SERVER_IDS:
         await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
         return
+    
     # ✅ Role check
     allowed_roles = ["Admin", "Steward"]
     user_roles = [role.name for role in ctx.author.roles]
@@ -79,8 +80,8 @@ async def start_timer(ctx, league: str = None, sprint: str = None):
     global timer_message, timer_task, auto_rename_threads, thread_counter
 
     # Modify league check to include F3 and General
-    if league not in ["F1", "F2", "F3", "general"]:
-        await ctx.send("Invalid league! Please use `!rpo F1`, `!rpo F2`, `!rpo F3`, or `!rpo general`.")
+    if league not in ["F1", "F2", "F3", "general", "MotoVGP"]:
+        await ctx.send("Invalid league! Please use `!rpo F1`, `!rpo F2`, `!rpo F3`, `!rpo MotoVGP` or `!rpo general`.")
         return
 
     cog = ctx.bot.get_cog('PenaltyCog')
@@ -91,7 +92,10 @@ async def start_timer(ctx, league: str = None, sprint: str = None):
     thread_counter = 1
     auto_rename_threads = True
 
-    duration = 90 if sprint and sprint.lower() == "sprint" else 60
+    # Allow the user to set the duration (in minutes). Default is 60, otherwise 90 if sprint is provided.
+    if sprint and sprint.lower() == "sprint":
+        duration = 90
+
     end_time = datetime.now() + timedelta(minutes=duration)
     end_time_str = to_discord_timestamp(end_time, 't')
     countdown_str = to_discord_timestamp(end_time, 'R')
@@ -336,3 +340,4 @@ async def pen_summary(ctx):
     summary = "\n".join(penalty_summary[ctx.channel.id])
     embed = discord.Embed(title="Penalty Summary", description=summary, color=discord.Color.blue())
     await ctx.send(embed=embed)
+
