@@ -119,7 +119,7 @@ async def start_timer(ctx, league: str = None, sprint: str = None, duration: int
 
 async def wait_and_close_timer(ctx, end_time):
     global auto_rename_threads
-    await asyncio.sleep(60 * 60)
+    await asyncio.sleep((end_time - datetime.now()).total_seconds())
     cog = ctx.bot.get_cog('PenaltyCog')
     if cog:
         cog.auto_rename_threads = False
