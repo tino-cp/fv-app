@@ -35,6 +35,7 @@ from commands.fastestLap import fastest_lap
 from commands.getLogs import GetLogs
 from commands.trainees import TraineeCog
 from commands.poll import Poll
+from commands.lapCount import LapCount
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -66,6 +67,7 @@ async def on_ready():
     await bot.add_cog(GetLogs(bot))
     await bot.add_cog(TraineeCog(bot))
     await bot.add_cog(Poll(bot))
+    await bot.add_cog(LapCount(bot))
 
     
 
