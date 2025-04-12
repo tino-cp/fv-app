@@ -63,6 +63,39 @@ async def show_help(ctx):
         inline=False
     )
 
+    # Poll Commands
+    embed.add_field(
+        name="**---------**__**POLL COMMANDS**__**---------**",
+        value=(
+            "`!poll <duration in hours>, <option1>, <option 2>, ...`\n"
+            "- Create a new poll with specified options and duration.\n"
+            "- **Duration**: Time in hours for how long the poll will last.\n"
+            "- **Options**: The options users can vote for, separated by commas.\n\n"
+            "**Example**:\n"
+            "- `!poll 2, Option 1, Option 2, Option 3`\n"
+            "- Creates a poll for 2 hours with 3 options.\n\n"
+            "The poll will send an anonymous vote button for users to choose an option. The results will be available once the poll ends.\n\n"
+
+            "`!pollCorrection <poll_number> <correct_answer>`\n"
+            "- Correct the correct answer for a specific poll by updating the CSV file.\n"
+            "- **Poll Number**: The ID of the poll you wish to correct.\n"
+            "- **Correct Answer**: The updated correct answer for the poll.\n\n"
+            "**Example**:\n"
+            "- `!pollCorrection 1, Option 2`\n"
+            "- Updates the correct answer for poll #1 to 'Option 2'.\n\n"
+            "This command can be used to correct any inaccuracies in the poll answers after the poll has ended.\n\n"
+
+            "`!getPollLogs`\n"
+            "- Retrieves and sends the CSV file containing all poll results.\n"
+            "- Available to everyone.\n\n"
+            "**Example**:\n"
+            "- `!getPollLogs`\n"
+            "- Sends the `all_polls.csv` file containing the results of all polls.\n\n"
+            "This command allows users to access the poll logs for review or record-keeping.\n\n\n\n"  # Two empty lines
+        ),
+        inline=False
+    )
+
     # Trainee Steward Commands
     embed.add_field(
         name="**---------**__**TRAINEE STEWARD COMMANDS**__**---------**",

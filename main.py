@@ -34,6 +34,7 @@ from commands.results import results_command
 from commands.fastestLap import fastest_lap
 from commands.getLogs import GetLogs
 from commands.trainees import TraineeCog
+from commands.poll import Poll
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -55,6 +56,7 @@ bot.add_command(results_command)
 bot.add_command(fastest_lap)
 
 
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
@@ -63,6 +65,7 @@ async def on_ready():
     await bot.add_cog(RaceAttendance(bot))
     await bot.add_cog(GetLogs(bot))
     await bot.add_cog(TraineeCog(bot))
+    await bot.add_cog(Poll(bot))
 
 # Start the bot with the token from your .env file
 bot.run(os.getenv('DISCORD_TOKEN'))
