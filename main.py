@@ -67,5 +67,7 @@ async def on_ready():
     await bot.add_cog(TraineeCog(bot))
     await bot.add_cog(Poll(bot))
 
+    
+
 # Start the bot with the token from your .env file
 bot.run(os.getenv('DISCORD_TOKEN'))

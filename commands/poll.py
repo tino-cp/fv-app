@@ -5,6 +5,7 @@ import csv
 import os
 import asyncio
 from datetime import datetime, timedelta
+import json
 
 # Get server IDs as a set of integers
 ALLOWED_SERVER_IDS = set(
@@ -19,6 +20,10 @@ class PollView(View):
         self.poll_id = poll_id
         self.notification_channel = notification_channel  # Store the channel for notifications
         self.creator_id = creator_id  # Store the creator's user ID
+        self.timeout = timeout
+
+        # Save poll data to JSON when the poll starts
+        self.save_poll_data()
 
         for idx, option in enumerate(options):
             button = Button(label=option, custom_id=f"poll_{poll_id}_{idx}", style=discord.ButtonStyle.primary)
@@ -30,34 +35,47 @@ class PollView(View):
         end_poll_button.callback = self.end_poll
         self.add_item(end_poll_button)
 
+    def save_poll_data(self):
+        """Save ongoing poll data to a JSON file."""
+        poll_data = {
+            'poll_id': self.poll_id,
+            'options': self.options,
+            'votes': self.votes,
+            'creator_id': self.creator_id,
+            'end_time': str(datetime.utcnow() + timedelta(seconds=self.timeout)),
+            'message_id': getattr(self, "message_id", None),
+            'channel_id': getattr(self, "channel_id", None)
+        }
+        with open(f"poll_results/poll_{self.poll_id}.json", "w", encoding="utf-8") as f:
+            json.dump(poll_data, f, ensure_ascii=False, indent=4)
+
     async def vote(self, interaction: discord.Interaction):
         user_id = interaction.user.id
         username = interaction.user.name  # Get the username
         option_index = int(interaction.data['custom_id'].split('_')[-1])
 
         if user_id in self.votes:
-            # If the user already voted, update their vote
             previous_option = self.votes[user_id]["vote"]
             if previous_option == option_index:
                 await interaction.response.send_message("You already voted for this option!", ephemeral=True)
                 return
             else:
-                # Update the vote to the new option
                 self.votes[user_id] = {"username": username, "vote": option_index}
                 await interaction.response.send_message(f"Your vote has been changed to **{self.options[option_index]}**!", ephemeral=True)
         else:
-            # First-time vote
             self.votes[user_id] = {"username": username, "vote": option_index}
             await interaction.response.send_message(f"Your vote has been recorded anonymously! You voted for **{self.options[option_index]}**.", ephemeral=True)
 
-        # Send a message saying "<Name> has voted" in the same channel
+        # ✅ Save updated votes to JSON
+        self.save_poll_data()
+
         await interaction.channel.send(f"{username} has voted! in poll #{self.poll_id}")
 
-        # Send notification to the specified channel
         if self.notification_channel:
             channel = interaction.guild.get_channel(self.notification_channel)
             if channel:
                 await channel.send(f"📩 {username} has voted for option **{self.options[option_index]}** in poll #{self.poll_id}")
+
 
     async def end_poll(self, interaction: discord.Interaction):
         # Ensure only the poll creator can end the poll
@@ -102,7 +120,7 @@ class PollView(View):
         # Send the results in the same channel where the poll was created
         await interaction.channel.send(embed=result_embed)
 
-        # Save to a single CSV file, appending the results
+        # Save the results to CSV
         os.makedirs("poll_results", exist_ok=True)
         with open("poll_results/all_polls.csv", "a", newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -112,22 +130,93 @@ class PollView(View):
             for user_data in self.votes.values():
                 writer.writerow([self.poll_id, user_data["username"], self.options[user_data["vote"]], winning_option])
 
+        # Delete the JSON file after the poll ends
+        os.remove(f"poll_results/poll_{self.poll_id}.json")
+
+    def check_for_ongoing_polls(self):
+        """Check for ongoing polls that need to be resumed."""
+        for filename in os.listdir("poll_results"):
+            if filename.endswith(".json"):
+                poll_id = int(filename.split("_")[1].split(".")[0])  # Extract poll ID
+                with open(f"poll_results/{filename}", "r", encoding="utf-8") as f:
+                    poll_data = json.load(f)
+                    # You can check if the poll has timed out and then end it or load it manually
+                    # (e.g., check the poll's `end_time` and compare it with the current time)
+
+
 
 class Poll(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.poll_counter = self.get_last_poll_id()  # Get the last poll ID from the CSV or set to 0
+        self.bot.loop.create_task(self.load_ongoing_polls())
+
+
+    async def load_ongoing_polls(self):
+        for filename in os.listdir("poll_results"):
+            if filename.endswith(".json"):
+                with open(f"poll_results/{filename}", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                end_time = datetime.fromisoformat(data["end_time"])
+                remaining_time = (end_time - datetime.utcnow()).total_seconds()
+
+                if remaining_time <= 0:
+                    continue  # Poll already expired
+
+                channel = self.bot.get_channel(data["channel_id"])
+                if not channel:
+                    continue
+
+                try:
+                    message = await channel.fetch_message(data["message_id"])
+                except discord.NotFound:
+                    continue
+
+                view = PollView(
+                    options=data["options"],
+                    timeout=remaining_time,
+                    poll_id=data["poll_id"],
+                    notification_channel=None,
+                    creator_id=data["creator_id"]
+                )
+                view.votes = {int(k): v for k, v in data["votes"].items()}
+                view.save_poll_data()
+                view.message_id = data["message_id"]
+                view.channel_id = data["channel_id"]
+
+                # Reattach the view
+                print(f"[Poll] Restoring poll #{data['poll_id']} in channel {data['channel_id']}...")
+                await message.edit(view=view)
 
     def get_last_poll_id(self):
-        # Check if the CSV exists and read the last poll ID
+        last_id_csv = 0
+        last_id_json = 0
+
+        # Check CSV for last used poll ID
         if os.path.exists("poll_results/all_polls.csv"):
             with open("poll_results/all_polls.csv", "r", encoding="utf-8") as f:
                 reader = csv.reader(f)
-                next(reader)  # Skip the header
-                last_row = list(reader)[-1]  # Get the last row
-                if last_row:
-                    return int(last_row[0])  # Return the last poll ID
-        return 0  # If no CSV or no polls, start with 0
+                next(reader, None)  # Skip header
+                rows = list(reader)
+                if rows:
+                    last_row = rows[-1]
+                    if last_row:
+                        try:
+                            last_id_csv = int(last_row[0])
+                        except ValueError:
+                            pass
+
+        # Check JSON files for max poll ID
+        for filename in os.listdir("poll_results"):
+            if filename.endswith(".json") and filename.startswith("poll_"):
+                try:
+                    poll_id = int(filename.split("_")[1].split(".")[0])
+                    last_id_json = max(last_id_json, poll_id)
+                except (ValueError, IndexError):
+                    continue
+
+        return max(last_id_csv, last_id_json)
 
     @commands.command(name="poll")
     async def create_poll(self, ctx, *, args):
@@ -174,6 +263,9 @@ class Poll(commands.Cog):
         notification_channel = 123456789  # Replace with your actual channel ID
         view = PollView(options, timeout=timeout, poll_id=poll_id, notification_channel=notification_channel, creator_id=ctx.author.id)
         message = await ctx.send(embed=embed, view=view)
+        view.message_id = message.id
+        view.channel_id = ctx.channel.id
+        view.save_poll_data()
 
         await asyncio.sleep(timeout)
 
@@ -285,3 +377,6 @@ class Poll(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Poll(bot))
+    cog = Poll(bot)
+    bot.add_cog(cog)
+    bot.loop.create_task(cog.load_ongoing_polls())
