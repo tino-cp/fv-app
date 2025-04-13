@@ -26,6 +26,9 @@ async def show_help(ctx):
             "- Get the current weather conditions for the location.\n\n"
             "`!rain`\n"
             "- Shows 5 periods of upcoming rain forecasts at your location.\n\n\n\n"  # Two empty lines
+            "`!lapchecks`\n"
+            "- Roll out lap checks for all positions (1-5) using a custom formula.\n\n"
+            "- Displays the chance of being lap-checked, the value rolled, and the status for each position.\n\n"
         ),
         inline=False
     )
@@ -41,7 +44,15 @@ async def show_help(ctx):
             "**Examples**:\n"
             "- `!race f1 r1`\n"
             "- `!race f2`\n\n"
-            "If no round is specified, it defaults to the nearest upcoming round.\n\n\n\n"  # Two empty lines
+            "- `!race f3 r11`\n\n"
+            "If no round is specified, it defaults to the nearest upcoming round.\n"
+            "---\n"
+            "`!weather`\n"
+            "- Get the current weather conditions.\n"
+            "---\n"
+            "`!rain`\n"
+            "- Shows 5 periods of upcoming rain forecasts for the current time.\n\n"
+            "---\n"
         ),
         inline=False
     )
