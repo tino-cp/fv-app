@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from utils.race_utils import fetch_closest_upcoming_round, process_race_series
 
+# Constants
 BASE_RACE_START_DATES = {
     "f1": datetime(2025, 5, 4, 18, 0, tzinfo=dt_timezone.utc),
     "f2": datetime(2025, 5, 3, 17, 0, tzinfo=dt_timezone.utc),
@@ -43,6 +44,10 @@ async def race(ctx, series: str = None, race_round: str = None):
         race_round = f"r{round_number}"
 
     race_round_number = int(race_round[1:])
+
+    if race_round_number == 0:
+        await send_embed(ctx, "Invalid round number", "Please specify a round number between 1 and 13", discord.Color.red())
+        return
 
     if race_round_number > TOTAL_ROUNDS:
         await send_embed(ctx, "Off-Season Break", "Season 14 is concluded.", discord.Color.red())
