@@ -7,35 +7,52 @@ class LapCount(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    def calculate_lap_count(self, lap_time: float) -> int:
+        return ceil(2400 / lap_time) + 2
+
     @commands.command(name='lapcount', aliases=['lapCount', 'lc'])
     async def lap_count(self, ctx, time: float):
-        # Calculate lap count
-        def calculate_lap_count(time):
-            return math.ceil(2400 / time) + 2
+        user_lap_count = self.calculate_lap_count(time)
 
-        # Prepare a list for the table
-        time_range = []
-        for i in range(8):
+        intervals = {}
+        current_lap = None
+        current_start = None
 
-            upper_time = time + (0.1 * (8 - i))
-            time_range.append((upper_time, calculate_lap_count(upper_time)))
+        # Sweep through a range to find intervals
+        for t in [round(time + i * 0.1, 1) for i in range(-100, 101)]:
+            laps = self.calculate_lap_count(t)
 
-        # Add the exact value of the user input as bold
-        time_range.append((time, f"**--{calculate_lap_count(time)}--**"))
+            if current_lap is None:
+                current_lap = laps
+                current_start = t
+            elif laps != current_lap:
+                intervals.setdefault(current_lap, []).append((round(current_start, 1), round(t - 0.1, 1)))
+                current_lap = laps
+                current_start = t
 
-        for i in range(8):
-
-            lower_time = time - (0.1 * (i + 1))
-            time_range.append((lower_time, calculate_lap_count(lower_time)))
-            
+        # Handle final interval
+        intervals.setdefault(current_lap, []).append((round(current_start, 1), round(t, 1)))
 
         # Create the embed
         embed = discord.Embed(title="🏁 Lap Count Estimator", color=discord.Color.blue())
+        embed.add_field(name="Your Time", value=f"**{time:.1f} - {user_lap_count} Laps**", inline=False)
+        embed.add_field(name="Lap Count Intervals", value="────────────────────", inline=False)
 
-        for t, lap in time_range:
-            embed.add_field(name=f"{t:.1f} seconds", value=f"{lap} laps", inline=False)
+        # Add 1 lap more
+        if user_lap_count + 1 in intervals:
+            for start, end in intervals[user_lap_count + 1]:
+                embed.add_field(name=f"{start:.1f} - {end:.1f}", value=f"{user_lap_count + 1} Laps", inline=False)
 
-        # Send the embed
+        # Add same lap count
+        if user_lap_count in intervals:
+            for start, end in intervals[user_lap_count]:
+                embed.add_field(name=f"{start:.1f} - {end:.1f}", value=f"{user_lap_count} Laps", inline=False)
+
+        # Add 1 lap less
+        if user_lap_count - 1 in intervals:
+            for start, end in intervals[user_lap_count - 1]:
+                embed.add_field(name=f"{start:.1f} - {end:.1f}", value=f"{user_lap_count - 1} Laps", inline=False)
+
         await ctx.send(embed=embed)
 
 async def setup(bot):
