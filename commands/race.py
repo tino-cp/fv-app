@@ -4,10 +4,25 @@ import discord
 from discord.ext import commands
 from utils.race_utils import fetch_closest_upcoming_round, process_race_series
 
+# Constants
+BASE_RACE_START_DATES = {
+    "f1": datetime(2025, 5, 4, 18, 0, tzinfo=dt_timezone.utc),
+    "f2": datetime(2025, 5, 3, 17, 0, tzinfo=dt_timezone.utc),
+    "f3": datetime(2025, 5, 2, 18, 0, tzinfo=dt_timezone.utc)
+}
+SPRINT_RACES = {"r3", "r6", "r11"}
+MID_SEASON_BREAK = datetime(2025, 6, 20, 18, 0, tzinfo=dt_timezone.utc)
+MID_SEASON_ROUND_BREAK = 8
+TOTAL_ROUNDS = 13
+
+async def send_embed(ctx, title, description, color):
+    embed = discord.Embed(title=title, description=description, color=color)
+    await ctx.send(embed=embed)
+
 @commands.command()
 async def race(ctx, series: str = None, race_round: str = None):
     """
-    Fetches the race weather for F1 or F2 schedules.
+    Fetches the race weather for F1, F2, or F3 schedules.
     Example usage:
       !race f1 r1
       !race f2 r2
@@ -17,51 +32,39 @@ async def race(ctx, series: str = None, race_round: str = None):
     race_round = race_round.lower() if race_round else None
     current_time = datetime.now(dt_timezone.utc)
 
-    # Define base start dates for regular races
-    base_race_start_dates = {
-        "f1": datetime(2025, 5, 4, 18, 0, tzinfo=dt_timezone.utc),
-        "f2": datetime(2025, 5, 3, 17, 0, tzinfo=dt_timezone.utc),
-        "f3": datetime(2025, 5, 2, 18, 0, tzinfo=dt_timezone.utc)
-    }
+    if series not in BASE_RACE_START_DATES:
+        await send_embed(ctx, "Invalid Series", "Please specify either 'f1', 'f2' or 'f3'.", discord.Color.red())
+        return
 
-    # Define sprint races that start 30 minutes earlier
-    sprint_races = {"r3", "r6", "r11"}
+    race_start = BASE_RACE_START_DATES[series]
 
-    mid_season_breaks = [
-        datetime(2025, 6, 20, 18, 0, tzinfo=dt_timezone.utc)
-    ]
+    # Determine the race round if not specified
+    if not race_round:
+        round_number = await fetch_closest_upcoming_round(race_start, current_time)
+        race_round = f"r{round_number}"
 
-    if series in base_race_start_dates:
-        # Fetch the base race start time
-        race_start = base_race_start_dates[series]
+    race_round_number = int(race_round[1:])
 
-        # Determine the race round if not specified
-        if not race_round:
-            round_number = await fetch_closest_upcoming_round(race_start, current_time)
-            race_round = f"r{round_number}"
+    if race_round_number == 0:
+        await send_embed(ctx, "Invalid round number", "Please specify a round number between 1 and 13", discord.Color.red())
+        return
 
-        # Check if the race falls during a mid-season break
-        for break_date in mid_season_breaks:
-            if race_start <= break_date < race_start + timedelta(weeks=1):
-                embed = discord.Embed(
-                    title="Mid-Season Break",
-                    description="There is a mid-season break during this week. No races scheduled.",
-                    color=discord.Color.red()
-                )
-                await ctx.send(embed=embed)
-                return
+    if race_round_number > TOTAL_ROUNDS:
+        await send_embed(ctx, "Off-Season Break", "Season 14 is concluded.", discord.Color.red())
+        return
 
-        # Adjust start time for sprint races
-        if race_round in sprint_races:
-            race_start -= timedelta(minutes=30)
+    # Adjust for mid-season break
+    if race_round_number >= MID_SEASON_ROUND_BREAK:
+        race_start += timedelta(weeks=1)
 
-        # Process the race
-        await process_race_series(ctx, race_round, race_start, current_time, series)
-    else:
-        # Handle invalid series input
-        embed = discord.Embed(
-            title="Invalid Series",
-            description="Please specify either 'f1', 'f2' or 'f3'.",
-            color=discord.Color.red()
-        )
-        await ctx.send(embed=embed)
+    # Check if the race falls during a mid-season break
+    if MID_SEASON_BREAK <= race_start < MID_SEASON_BREAK + timedelta(weeks=1):
+        await send_embed(ctx, "Mid-Season Break", "There is a mid-season break during this week. No races scheduled.", discord.Color.red())
+        return
+
+    # Adjust start time for sprint races
+    if race_round in SPRINT_RACES:
+        race_start -= timedelta(minutes=30)
+
+    # Process the race
+    await process_race_series(ctx, race_round, race_start, current_time, series)
