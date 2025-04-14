@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-@commands.command(name="help")
+@commands.command(name="help", aliases=['h'])
 async def show_help(ctx):
     """
     Unified help command displaying all bot commands in a single embed.
@@ -118,7 +118,7 @@ async def show_help(ctx):
             "- Used by stewards to approve a suggestion made by a trainee.\n"
             "- Reply to a suggestion and use this command to approve it.\n"
             "- Logs the suggestion as approved with the steward’s name.\n\n"
-            "`!list_suggestions`\n"
+            "`!listSuggestions`\n"
             "- Retrieves a list of all logged trainee suggestions in CSV format.\n"
             "- Only available to stewards or admins.\n\n\n\n"  # Two empty lines
         ),

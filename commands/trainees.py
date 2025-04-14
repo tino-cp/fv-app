@@ -54,7 +54,7 @@ class TraineeCog(commands.Cog):
 
         await ctx.send(f"✅ Suggestion from **{trainee}** logged.\nThread: {thread_link}")
 
-    @commands.command(name='approve')
+    @commands.command(name='approve', aliases=['approved', 'Aprroved', 'Approve'])
     async def approve(self, ctx):
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
@@ -92,7 +92,7 @@ class TraineeCog(commands.Cog):
         await ctx.send(f"✅ Suggestion from **{trainee}** approved by **{steward}** in thread **{ctx.channel.name}**.")
 
 
-    @commands.command(name='list_suggestions')
+    @commands.command(name='listSuggestions', aliases=['ls', 'suggestionList', 'ListSuggestion'])
     async def list_suggestions(self, ctx):
         """Send the full trainee_suggestions.csv file"""
         if not any(role.name in ["Steward", "Admin"] for role in ctx.author.roles):
