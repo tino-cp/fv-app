@@ -214,7 +214,7 @@ async def pen_command(ctx, *, action: str):
         return
 
     thread_name = ctx.channel.name
-    user = ctx.author.display_name
+    user = str(ctx.author)
     cog = ctx.bot.get_cog('PenaltyCog')
     league = cog.current_league if cog else "?"
 
