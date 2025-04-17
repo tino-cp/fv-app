@@ -43,7 +43,7 @@ async def standings_command(ctx, category: str = None):
 
     try:
         # Load Excel
-        excel_path = "Formula V SuperLicense (S14).xlsx"
+        excel_path = "Formula V SuperLicense.xlsx"
         df = pd.read_excel(excel_path, sheet_name="Calendar and Standings")
 
         # Select correct range
