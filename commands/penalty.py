@@ -219,7 +219,7 @@ async def pen_command(ctx, *, action: str):
     league = cog.current_league if cog else "?"
 
     no_reason_actions = ["NFA", "NFI", "LI", "RI", "NFH"]
-    name_reason_actions = ["TLW", "LW", "REP", "SSIR", "DSQ"]
+    name_reason_actions = ["TLW", "LW", "REP", "SSIR", "DSQ", "BOTG"]
     if action.lower().startswith("pov "):
         parts = action.split(maxsplit=1)
         if len(parts) < 2:
