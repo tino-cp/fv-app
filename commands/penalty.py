@@ -95,6 +95,14 @@ async def start_timer(ctx, league: str = None, sprint: str = None, duration: int
     # Allow the user to set the duration (in minutes). Default is 60, otherwise 90 if sprint is provided.
     if sprint and sprint.lower() == "sprint":
         duration = 90
+    elif sprint is None:
+        duration = 60
+    else:
+        try:
+            duration = int(sprint)
+        except ValueError:
+            await ctx.send("Invalid duration! Please provide a number.")
+            return
 
     end_time = datetime.now() + timedelta(minutes=duration)
     end_time_str = to_discord_timestamp(end_time, 't')
