@@ -3,11 +3,32 @@ import logging
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+import aiohttp
+import asyncio
+from discord.ext import tasks
+import requests
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+EXCEL_URL = os.getenv("ONEDRIVE_LINK")
+EXCEL_FILE_NAME = "Formula V SuperLicense.xlsx"
+
+async def download_excel_file():
+    try:
+        response = requests.get(EXCEL_URL)
+        response.raise_for_status()
+        with open(EXCEL_FILE_NAME, "wb") as f:
+            f.write(response.content)
+        print(f"[✓] Excel file updated: {EXCEL_FILE_NAME}")
+    except Exception as e:
+        print(f"[!] Failed to download Excel file: {e}")
+
+@tasks.loop(minutes=60)
+async def download_excel_file_loop():
+    await download_excel_file()
 
 # Bot commands
 intents = discord.Intents.default()
@@ -68,6 +89,8 @@ async def on_ready():
     await bot.add_cog(TraineeCog(bot))
     await bot.add_cog(Poll(bot))
     await bot.add_cog(LapCount(bot))
+    # await download_excel_file()
+    download_excel_file_loop.start()
 
     
 

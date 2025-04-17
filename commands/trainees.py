@@ -32,7 +32,7 @@ class TraineeCog(commands.Cog):
         
         
         """Trainees log a penalty suggestion"""
-        if not any(role.name == "Trainee Steward" for role in ctx.author.roles):
+        if not any(role.name == ["Trainee Steward", "Steward"] for role in ctx.author.roles):
             await ctx.send("🚫 Only Trainees can use this command.")
             return
 

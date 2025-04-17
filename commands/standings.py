@@ -3,7 +3,7 @@ from discord.ext import commands
 import pandas as pd
 import os
 
-@commands.command(name="standings", help="Get current F1 or F2 standings. Usage: !standings F1, F2, F1C, or F2C")
+@commands.command(name="standings", help="Get current F1 F2 or F3 standings. Usage: !standings F1, F2, F1C, or F2C")
 async def standings_command(ctx, category: str = None):
     if category is None:
         embed = discord.Embed(
@@ -26,12 +26,16 @@ async def standings_command(ctx, category: str = None):
         "F2": {
             "driver": (46, 77, 35, 37),   # AJ47:AK77
             "constructor": (29, 40, 35, 37)  # AJ30:AK40
+        },
+        "F3": {
+            "driver": (46, 77, 48, 49),   # AJ47:AK77
+            "constructor": (29, 40, 48, 49)  # AJ30:AK40
         }
     }
 
     if league not in STANDINGS_RANGES:
         embed = discord.Embed(
-            description="❌ Invalid league! Use `F1`, `F2`, `F1C`, or `F2C`.",
+            description="❌ Invalid league! Use `F1`, `F2`, `F1C`, `F2C`, `F3C` or `F3`.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
@@ -39,7 +43,7 @@ async def standings_command(ctx, category: str = None):
 
     try:
         # Load Excel
-        excel_path = "Formula V SuperLicense (S13).xlsx"
+        excel_path = "Formula V SuperLicense.xlsx"
         df = pd.read_excel(excel_path, sheet_name="Calendar and Standings")
 
         # Select correct range

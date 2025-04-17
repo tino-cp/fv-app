@@ -8,7 +8,7 @@ import os
 async def results_command(ctx, race: str):
     try:
         # Load the Excel file directly
-        excel_path = "Formula V SuperLicense (S13).xlsx"
+        excel_path = "Formula V SuperLicense.xlsx"
         excel_data = pd.ExcelFile(excel_path, engine='openpyxl')
 
         # Check if the requested race sheet exists
