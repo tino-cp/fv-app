@@ -312,20 +312,19 @@ class Poll(commands.Cog):
 
     @commands.command(name="pollCorrection")
     async def poll_correction(self, ctx, poll_number: int, correct_answer: str):
+        """Correct the winning answer for a specific poll by updating the CSV file."""
         
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
             return
         
-        # ✅ Role check
+        # Role check
         allowed_roles = ["Admin", "Steward", "FIA Comissioner"]
         user_roles = [role.name for role in ctx.author.roles]
 
         if not any(role in user_roles for role in allowed_roles):
             await ctx.send("🚫 You do not have permission to use this command.")
             return        
-        
-        """Correct the correct answer for a specific poll by updating the CSV file."""
         
         # Check if the poll number exists in the CSV
         if not os.path.exists("poll_results/all_polls.csv"):
@@ -348,8 +347,10 @@ class Poll(commands.Cog):
                 continue
             poll_id = int(row[0])
             if poll_id == poll_number:
-                row.append(correct_answer)  # Add the new 'correct answer' to the row
-                poll_found = True
+                # MODIFY the existing winning option (4th column) instead of appending
+                if len(row) >= 4:  # Ensure row has enough columns
+                    row[3] = correct_answer  # Change the winning option
+                    poll_found = True
 
         if not poll_found:
             await ctx.send(f"Poll number {poll_number} not found.")
@@ -358,12 +359,9 @@ class Poll(commands.Cog):
         # Rewrite the CSV file with the updated data
         with open("poll_results/all_polls.csv", "w", newline='', encoding="utf-8") as f:
             writer = csv.writer(f)
-            # Add the new header with 'Correct Answer' column
-            if reader[0][0] != "Poll ID":
-                reader[0].append("Correct Answer")  # Add new column header if not already there
             writer.writerows(reader)
 
-        await ctx.send(f"Correct answer for poll #{poll_number} has been updated to '{correct_answer}'.")
+        await ctx.send(f"Winning option for poll #{poll_number} has been updated to '{correct_answer}'.")
 
     @commands.command(name="getPollLogs")
     async def get_poll_logs(self, ctx):
