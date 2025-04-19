@@ -47,7 +47,7 @@ def add_tick_to_name(name: str) -> str:
     """Add ✅ at the start if not already present."""
     return name if name.startswith("✅") else f"✅ {name}"
 
-ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667, 1334666588997161074, 1177033855799132181}
+ALLOWED_CHANNEL_IDS = {1324562135803494520 , 1324565883120521216, 1313982452355825667, 1334666588997161074, 1177033855799132181,1361890376125780180}
 
 class PenaltyCog(commands.Cog):
     def __init__(self, bot):
@@ -70,7 +70,7 @@ async def start_timer(ctx, league: str = None, sprint: str = None, duration: int
         return
     
     # ✅ Role check
-    allowed_roles = ["Admin", "Steward"]
+    allowed_roles = ["Admin", "Steward", "League Director"]
     user_roles = [role.name for role in ctx.author.roles]
 
     if not any(role in user_roles for role in allowed_roles):
