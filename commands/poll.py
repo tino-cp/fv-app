@@ -373,6 +373,48 @@ class Poll(commands.Cog):
         else:
             await ctx.send("Poll logs file not found.")
 
+    @commands.command(name="fixPoll")
+    async def fix_poll(self, ctx, poll_id: int):
+        """Fix a poll JSON file by restoring missing message_id and channel_id."""
+
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
+
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return
+
+        if not ctx.message.reference:
+            await ctx.send("❗ You need to reply to the original poll message with this command.")
+            return
+
+        replied_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        message_id = replied_message.id
+        channel_id = replied_message.channel.id
+
+        json_path = f"poll_results/poll_{poll_id}.json"
+        if not os.path.exists(json_path):
+            await ctx.send(f"❌ Poll #{poll_id} not found.")
+            return
+
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                poll_data = json.load(f)
+
+            poll_data["message_id"] = message_id
+            poll_data["channel_id"] = channel_id
+
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(poll_data, f, ensure_ascii=False, indent=4)
+
+            await ctx.send(f"✅ Poll #{poll_id} JSON updated with message_id `{message_id}` and channel_id `{channel_id}`.")
+
+        except Exception as e:
+            await ctx.send(f"⚠️ An error occurred while fixing the poll: {e}")
+
 def setup(bot):
     bot.add_cog(Poll(bot))
     cog = Poll(bot)
