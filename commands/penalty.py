@@ -209,7 +209,7 @@ async def pen_command(ctx, *, action: str):
         await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
         return
     # ✅ Role check
-    allowed_roles = ["Admin", "Steward"]
+    allowed_roles = ["Admin", "Steward", "League Director"]
     user_roles = [role.name for role in ctx.author.roles]
 
     if not any(role in user_roles for role in allowed_roles):
