@@ -57,6 +57,7 @@ from commands.getLogs import GetLogs
 from commands.trainees import TraineeCog
 from commands.poll import Poll
 from commands.lapCount import LapCount
+from commands.penaltyPoints import penalty_points
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -76,8 +77,7 @@ bot.add_command(nuke_command)
 bot.add_command(standings_command)
 bot.add_command(results_command)
 bot.add_command(fastest_lap)
-
-
+bot.add_command(penalty_points)
 
 @bot.event
 async def on_ready():
