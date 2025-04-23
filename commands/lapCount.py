@@ -7,6 +7,12 @@ class LapCount(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    def format_time(self, seconds: float) -> str:
+        """Convert seconds to MM:SS.sss format"""
+        minutes = int(seconds // 60)
+        seconds_remainder = seconds % 60
+        return f"{minutes}:{seconds_remainder:05.2f}"
+
     @commands.command(name='lapcount', aliases=['lapCount', 'lc'])
     async def lap_count(self, ctx, time: float):
         def calculate_lap_count(t):
@@ -14,61 +20,57 @@ class LapCount(commands.Cog):
 
         user_laps = calculate_lap_count(time)
 
-        # Generate all possible intervals around the user's time
+        # Generate all intervals
         intervals = []
         
-        # Find the full range for the user's lap count
-        lower_bound = upper_bound = time
-        while calculate_lap_count(lower_bound - 0.1) == user_laps:
-            lower_bound -= 0.1
-        while calculate_lap_count(upper_bound + 0.1) == user_laps:
-            upper_bound += 0.1
-        user_interval = (lower_bound, upper_bound, user_laps)
+        # Find user's interval range
+        lower = upper = time
+        while calculate_lap_count(lower - 0.1) == user_laps:
+            lower -= 0.1
+        while calculate_lap_count(upper + 0.1) == user_laps:
+            upper += 0.1
+        user_interval = (lower, upper, user_laps)
         
-        # Find the next higher lap count (slower times)
-        higher_lower = upper_bound + 0.1
-        higher_laps = calculate_lap_count(higher_lower)
-        higher_upper = higher_lower
-        while calculate_lap_count(higher_upper + 0.1) == higher_laps:
-            higher_upper += 0.1
-        higher_interval = (higher_lower, higher_upper, higher_laps)
+        # Find adjacent intervals
+        def get_interval(start_time, step):
+            laps = calculate_lap_count(start_time)
+            bound = start_time
+            while calculate_lap_count(bound + step) == laps:
+                bound += step
+            return (min(start_time, bound), max(start_time, bound), laps)
         
-        # Find the next lower lap count (faster times)
-        lower_upper = lower_bound - 0.1
-        lower_laps = calculate_lap_count(lower_upper)
-        lower_lower = lower_upper
-        while calculate_lap_count(lower_lower - 0.1) == lower_laps:
-            lower_lower -= 0.1
-        lower_interval = (lower_lower, lower_upper, lower_laps)
+        faster_interval = get_interval(lower - 0.1, -0.1)
+        slower_interval = get_interval(upper + 0.1, +0.1)
 
-        # Combine and sort all intervals (fastest to slowest)
-        all_intervals = [lower_interval, user_interval, higher_interval]
-        all_intervals.sort()  # Sorts by start time (fastest first)
+        # Combine and sort intervals
+        all_intervals = sorted([faster_interval, user_interval, slower_interval])
 
-        # Prepare the embed
-        embed = discord.Embed(title="🏁 Lap Count Estimator", color=discord.Color.blue())
+        # Build embed
+        embed = discord.Embed(
+            title="🏁 Lap Count Estimator",
+            color=discord.Color.green()
+        )
         
-        # Add user's specific time
+        # User's time (formatted)
         embed.add_field(
-            name="Your Time", 
-            value=f"{time:.1f} - **{user_laps} Laps**", 
+            name="⏱️ Your Time",
+            value=f"`{self.format_time(time)}` → **{user_laps} Laps**",
             inline=False
         )
         
-        # Add interval header
-        embed.add_field(
-            name="Lap Count Intervals",
-            value="────────────────────",
-            inline=False
-        )
-        
-        # Add all intervals in order
+        # Interval table
+        interval_lines = []
         for lower, upper, laps in all_intervals:
-            embed.add_field(
-                name=f"{lower:.1f} - {upper:.1f}",
-                value=f"{laps} Laps",
-                inline=False
+            interval_lines.append(
+                f"`{self.format_time(lower)} - {self.format_time(upper)}` → {laps} Laps"
             )
+        
+        embed.add_field(
+            name="📊 Lap Count Intervals",
+            value="\n".join(interval_lines),
+            inline=False
+        )
+
 
         await ctx.send(embed=embed)
 
