@@ -75,21 +75,7 @@ async def show_help(ctx):
         inline=False
     )
 
-    # Poll Commands
-    embed1.add_field(
-        name="**---------**__**POLL COMMANDS**__**---------**",
-        value=(
-            "`!poll <duration in hours>, <option1>, <option 2>, ...`\n"
-            "- Create a new poll with specified options and duration.\n"
-            "- **Duration**: Time in hours for how long the poll will last.\n"
-            "- **Options**: The options users can vote for, separated by commas.\n\n"
-            "**Example**:\n"
-            "- `!poll 2, Option 1, Option 2, Option 3`\n"
-            "- Creates a poll for 2 hours with 3 options.\n\n"
-            "The poll will send an anonymous vote button for users to choose an option. The results will be available once the poll ends.\n\n"
-        ),
-        inline=False
-    )
+
     # Penalty Points Command
     embed1.add_field(
         name="**---------**__**PENALTY POINTS COMMAND**__**---------**",
@@ -106,7 +92,21 @@ async def show_help(ctx):
         ),
         inline=False
     )
-
+    # Poll Commands
+    embed1.add_field(
+        name="**---------**__**POLL COMMANDS**__**---------**",
+        value=(
+            "`!poll <duration in hours>, <option1>, <option 2>, ...`\n"
+            "- Create a new poll with specified options and duration.\n"
+            "- **Duration**: Time in hours for how long the poll will last.\n"
+            "- **Options**: The options users can vote for, separated by commas.\n\n"
+            "**Example**:\n"
+            "- `!poll 2, Option 1, Option 2, Option 3`\n"
+            "- Creates a poll for 2 hours with 3 options.\n\n"
+            "The poll will send an anonymous vote button for users to choose an option. The results will be available once the poll ends.\n\n"
+        ),
+        inline=False
+    )
     # Send first embed
     await ctx.send(embed=embed1)
 
