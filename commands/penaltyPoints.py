@@ -66,7 +66,7 @@ async def penalty_points(ctx, league: str = None):
                     color=discord.Color.red()
                 )
                 for _, row in df.iterrows():
-                    embed.add_field(name=row["Driver"], value=f"{row['Points']} points", inline=False)
+                    embed.add_field(name=row["Driver"], value=f"{row['Points']} points", inline=True)
                     if row["Points"] >= 12:
                         messages.append(f"🚨 {lg}: **{row['Driver']}** SHOULD BE BANNED FOR THIS WEEK!")
 
