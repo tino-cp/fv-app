@@ -11,20 +11,23 @@ class LapCount(commands.Cog):
         """Convert seconds to MM:SS.sss format"""
         minutes = int(seconds // 60)
         seconds_remainder = seconds % 60
-        return f"{minutes}:{seconds_remainder:05.2f}"
+        return f"{minutes}:{seconds_remainder:04.1f}"
 
     @commands.command(name='lapcount', aliases=['lapCount', 'lc'])
     async def lap_count(self, ctx, time: float):
+        # Truncate time to one decimal place
+        time_truncated = int(time * 10) / 10  # Step 1: Truncate here
+
         def calculate_lap_count(t):
             return math.ceil(2400 / t) + 2
 
-        user_laps = calculate_lap_count(time)
+        user_laps = calculate_lap_count(time_truncated)  # Use truncated time
 
         # Generate all intervals
         intervals = []
         
-        # Find user's interval range
-        lower = upper = time
+        # Find user's interval range using truncated time
+        lower = upper = time_truncated
         while calculate_lap_count(lower - 0.1) == user_laps:
             lower -= 0.1
         while calculate_lap_count(upper + 0.1) == user_laps:
@@ -45,16 +48,16 @@ class LapCount(commands.Cog):
         # Combine and sort intervals
         all_intervals = sorted([faster_interval, user_interval, slower_interval])
 
-        # Build embed
+        # Build embed with truncated time
         embed = discord.Embed(
             title="🏁 Lap Count Estimator",
             color=discord.Color.green()
         )
         
-        # User's time (formatted)
+        # User's truncated time
         embed.add_field(
             name="⏱️ Your Time",
-            value=f"`{self.format_time(time)}` → **{user_laps} Laps**",
+            value=f"`{self.format_time(time_truncated)}` → **{user_laps} Laps**",  # Display truncated
             inline=False
         )
         
@@ -70,7 +73,6 @@ class LapCount(commands.Cog):
             value="\n".join(interval_lines),
             inline=False
         )
-
 
         await ctx.send(embed=embed)
 
