@@ -253,7 +253,7 @@ class Poll(commands.Cog):
         timestamp = int(end_time.timestamp())
 
         embed = discord.Embed(title=f"📊 Verdict #{poll_id}",
-                              description=f"Vote anonymously by clicking below\n**Poll ends <t:{timestamp}:R>**",
+                              description=f"Vote anonymously by clicking below\n**Poll ends <t:{timestamp}:T>**",
                               color=discord.Color.blue())
 
         for i, option in enumerate(options):
