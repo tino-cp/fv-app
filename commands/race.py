@@ -8,7 +8,7 @@ from utils.race_utils import fetch_closest_upcoming_round, process_race_series
 BASE_RACE_START_DATES = {
     "f1": datetime(2025, 5, 4, 18, 0, tzinfo=dt_timezone.utc),
     "f2": datetime(2025, 5, 3, 17, 0, tzinfo=dt_timezone.utc),
-    "f3": datetime(2025, 5, 2, 18, 0, tzinfo=dt_timezone.utc)
+    "f3": datetime(2025, 5, 2, 17, 0, tzinfo=dt_timezone.utc)
 }
 SPRINT_RACES = {"r3", "r6", "r11"}
 MID_SEASON_BREAK = datetime(2025, 6, 20, 18, 0, tzinfo=dt_timezone.utc)

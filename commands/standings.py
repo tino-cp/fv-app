@@ -33,7 +33,7 @@ async def standings_command(ctx, category: str = None):
         },
         "INDY": {
             "driver": (46, 77, 107, 109),  # DD48:DE76
-            "constructor": (29, 40, 107, 109)  # DD30:DE39
+            "constructor": (28, 39, 107, 109)  # DD30:DE39
         },
         "S80": {
             "driver": (46, 77, 96, 98),   # CS48:CT77
