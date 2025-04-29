@@ -3,11 +3,11 @@ from discord.ext import commands
 import pandas as pd
 import os
 
-@commands.command(name="standings", help="Get current F1 F2 or F3 standings. Usage: !standings F1, F2, F1C, or F2C")
+@commands.command(name="standings", help="Get current F1, F2, F3, Indy, or S80 standings. Usage: !standings [league][C]")
 async def standings_command(ctx, category: str = None):
     if category is None:
         embed = discord.Embed(
-            description="❌ **Usage:** `!standings F1`, `!standings F2`, `!standings F1C`, or `!standings F2C`",
+            description="❌ **Usage:** `!standings F1`, `!standings F2`, `!standings F1C`, `!standings Indy`, `!standings IndyC`, etc.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
@@ -28,14 +28,22 @@ async def standings_command(ctx, category: str = None):
             "constructor": (29, 40, 35, 37)  # AJ30:AK40
         },
         "F3": {
-            "driver": (46, 77, 48, 49),   # AJ47:AK77
-            "constructor": (29, 40, 48, 49)  # AJ30:AK40
+            "driver": (46, 77, 48, 50),   # AJ47:AK77
+            "constructor": (29, 40, 48, 50)  # AJ30:AK40
+        },
+        "INDY": {
+            "driver": (46, 77, 107, 109),  # DD48:DE76
+            "constructor": (29, 40, 107, 109)  # DD30:DE39
+        },
+        "S80": {
+            "driver": (46, 77, 96, 98),   # CS48:CT77
+            "constructor": (29, 40, 96, 98)  # CS30:CT38
         }
     }
 
     if league not in STANDINGS_RANGES:
         embed = discord.Embed(
-            description="❌ Invalid league! Use `F1`, `F2`, `F1C`, `F2C`, `F3C` or `F3`.",
+            description="❌ Invalid league! Use `F1`, `F2`, `F3`, `Indy`, `S80`, or their constructor versions with `C`.",
             color=discord.Color.red()
         )
         await ctx.send(embed=embed)
