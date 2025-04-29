@@ -34,4 +34,4 @@ and supports Formula 1 and Formula 2 race schedules for the Formula V League.
   - Displays a countdown in an embed message.
   - Automatically closes the window when the timer ends.
     
-*This project uses implementation of [WeatherBot](https://github.com/nosv1/GTALens) by [nosv1](https://github.com/nosv1)*
+*This project uses a custom implementation based on [WeatherBot](https://github.com/nosv1/GTALens) by [nosv1](https://github.com/nosv1)*
