@@ -27,6 +27,7 @@ TEAMS_F1 = {
     "Not attending": "❌",
     "Dont know yet": "❓",
     "Spectator": "👀",
+    "Media": "🔴",
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
@@ -46,6 +47,7 @@ TEAMS_F2 = {
     "Not attending": "❌",
     "Dont know yet": "❓",
     "Spectator": "👀",
+    "Media": "🔴",
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
@@ -65,7 +67,9 @@ TEAMS_F3 = {
     "Not attending": "❌",
     "Dont know yet": "❓",
     "Spectator": "👀",
+    "Media": "🔴",
     "Reserve drivers": "<:reserve:1335001794719518830>"
+    
 }
 
 class RaceAttendance(commands.Cog):
