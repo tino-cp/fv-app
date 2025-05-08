@@ -91,6 +91,42 @@ class TraineeCog(commands.Cog):
 
         await ctx.send(f"✅ Suggestion from **{trainee}** approved by **{steward}** in thread **{ctx.channel.name}**.")
 
+    @commands.command(name='deny', aliases=['denied', 'Deny', 'Denied', 'Nope', 'nope'])
+    async def deny(self, ctx):
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
+        
+        """Steward denies a trainee suggestion (must reply to original message)"""
+        if not any(role.name == "Steward" for role in ctx.author.roles):
+            await ctx.send("🚫 Only Stewards can deny suggestions.")
+            return
+
+        if not ctx.message.reference:
+            await ctx.send("❌ You need to reply to a trainee's suggestion to deny it.")
+            return
+
+        try:
+            original = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        except discord.NotFound:
+            await ctx.send("❌ Could not find the original message.")
+            return
+
+        suggestion_data = self.suggestion_map.get(original.id)
+        if not suggestion_data:
+            await ctx.send("⚠️ That message is not tracked as a suggestion.")
+            return
+
+        trainee, message, thread_link = suggestion_data
+        steward = str(ctx.author)
+        timestamp = datetime.utcnow().isoformat()
+
+        # Log denial to CSV
+        with open(CSV_FILE, "a", newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([trainee, message, thread_link, f"denied by {steward}", timestamp])
+
+        await ctx.send(f"❌ Suggestion from **{trainee}** denied by **{steward}** in thread **{ctx.channel.name}**.")
 
     @commands.command(name='listSuggestions', aliases=['ls', 'suggestionList', 'ListSuggestion'])
     async def list_suggestions(self, ctx):
