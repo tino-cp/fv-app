@@ -58,6 +58,8 @@ from commands.trainees import TraineeCog
 from commands.poll import Poll
 from commands.lapCount import LapCount
 from commands.penaltyPoints import penalty_points
+from commands.penaltyPoints import lag_warnings
+from commands.penaltyPoints import reprimands
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -78,6 +80,8 @@ bot.add_command(standings_command)
 bot.add_command(results_command)
 bot.add_command(fastest_lap)
 bot.add_command(penalty_points)
+bot.add_command(reprimands)
+bot.add_command(lag_warnings)
 
 @bot.event
 async def on_ready():

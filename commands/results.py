@@ -22,7 +22,7 @@ async def results_command(ctx, race: str):
 
         # Read race results (AQ78:AW97 -> zero-indexed: 76:97, 42:49)
         df = excel_data.parse(race)
-        race_results = df.iloc[76:97, 42:49]  # 7 columns expected
+        race_results = df.iloc[76:97, 43:50]  # 7 columns expected
 
         # Define expected column names
         expected_columns = ["Position", "Driver", "Team", "Pts", "Race Time", "Fast Lap", "Penalty"]
