@@ -72,11 +72,37 @@ TEAMS_F3 = {
     
 }
 
+TEAMS_HYPERCAR = {
+    "Ferrari AF Corse": "<:fer:1233936232409468958>",
+    "BMW Team WRT": "<:bmw_wrt:1373353457553113238>",
+    "Alpine Endurance": "<:alp:844275251440910387>",
+    "Toyota Gazoo Racing": "<:toyota:1373353454419972107>",
+    "Porsche Penske": "<:porsche:1373353763473199208>",
+    "Cadillac Hertz Team Jota": "<:cadillac:1373353449705570364>",
+    "Aston Martin": "<:ast:1274844727757246586>",
+}
+
+TEAMS_LMGT3 = {
+    "Vista AF Corse": "<:af_corse1:1373353447163957418>",
+    "Team WRT": "<:wrt:1373353443770634412>",
+    "McLaren United Autosports": "<:mcl:980541416591724644>",
+    "TF Sport Corvette": "<:corvette:1373353736079937586>",
+    "Manthey Porsche": "<:manthey:1373353439739773030>",
+    "Mercedes Iron Lynx": "<:merc:844262871071195147>",
+    "Ford Proton Competition": "<:ford:1373353437403676762>",
+}
+
 class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.refresh_views.start()
-        self.attendance_files = {"F1": "attendance_f1.json", "F2": "attendance_f2.json", "F3": "attendance_f3.json"}
+        self.attendance_files = {
+    "F1": "attendance_f1.json",
+    "F2": "attendance_f2.json",
+    "F3": "attendance_f3.json",
+    "HYPERCAR": "attendance_hypercar.json",
+    "LMGT3": "attendance_lmgt3.json"
+}
 
 
     def load_attendance(self, category):
@@ -126,9 +152,15 @@ class RaceAttendance(commands.Cog):
         # Call the RAF3 command
         await self.race_attendance_f3(ctx)
 
-
     @commands.command(name="RAF1")
     async def race_attendance_f1(self, ctx):
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return     
+            
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
             return        
@@ -137,6 +169,14 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RAF2")
     async def race_attendance_f2(self, ctx):
+
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return     
+                
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
             return
@@ -145,14 +185,55 @@ class RaceAttendance(commands.Cog):
 
     @commands.command(name="RAF3")
     async def race_attendance_f3(self, ctx):
+
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return     
+
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
             return    
         self.save_attendance("F3", {})
         await self.send_attendance_message(ctx, "F3")
 
+    @commands.command(name="RAFVEC")
+    async def race_attendance_fvec(self, ctx):
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return
+
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
+
+        emoji_hypercar = "<:hypercar:1368181951420432514>"
+        await ctx.send(f"# {emoji_hypercar} HyperCar Attendance {emoji_hypercar}")
+
+        self.save_attendance("HYPERCAR", {})
+        await self.send_attendance_message(ctx, "HYPERCAR")
+
+        emoji_lmgt3 = "<:lmgt3:1368181949516222494>"
+        await ctx.send(f"# {emoji_lmgt3} LMGT3 Attendance {emoji_lmgt3}")
+
+        self.save_attendance("LMGT3", {})
+        await self.send_attendance_message(ctx, "LMGT3")
+
     @commands.command(name="reset")
     async def reset_attendance(self, ctx, category: str):
+
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return     
+
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
             return
@@ -194,17 +275,24 @@ class RaceAttendance(commands.Cog):
             teams = TEAMS_F1
         elif category == "F2":
             teams = TEAMS_F2
-        else:
+        elif category == "F3":
             teams = TEAMS_F3
+        elif category == "HYPERCAR":
+            teams = TEAMS_HYPERCAR
+        elif category == "LMGT3":
+            teams = TEAMS_LMGT3
+        else:
+            teams = {}
+
         attendance_data = self.load_attendance(category)
         embed = discord.Embed(
             title=f"Race Attendance {category}",
             description='Click the button to confirm your participation.',
-            color=discord.Color.green() if category == "F1" else discord.Color.yellow()
+            color=discord.Color.green() if category in ["F1", "HYPERCAR"] else discord.Color.blue()
         )
         for team, emoji in teams.items():
-            driver_list = self.get_driver_list(attendance_data.get(team, {}), guild)
-            embed.add_field(name=f"{team} {emoji}", value=f"```{driver_list}```", inline=True)
+                driver_list = self.get_driver_list(attendance_data.get(team, {}), guild)
+                embed.add_field(name=f"{emoji} {team}", value=driver_list or "No response yet", inline=True)
         return embed
 
     def get_driver_list(self, drivers, guild):
@@ -246,7 +334,7 @@ class RaceAttendance(commands.Cog):
     @tasks.loop(minutes=2)
     async def refresh_views(self):
         await self.bot.wait_until_ready()
-        for category in ["F1", "F2", "F3"]:
+        for category in ["F1", "F2", "F3", "HYPERCAR", "LMGT3"]:
             try:
                 with open(f"attendance_{category}_message.json", "r") as f:
                     data = json.load(f)
@@ -267,8 +355,14 @@ class RaceAttendance(commands.Cog):
             teams = TEAMS_F1
         elif category == "F2":
             teams = TEAMS_F2
-        else:
+        elif category == "F3":
             teams = TEAMS_F3
+        elif category == "HYPERCAR":
+            teams = TEAMS_HYPERCAR
+        elif category == "LMGT3":
+            teams = TEAMS_LMGT3
+        else:
+            teams = {}
         for team in teams:
             button = Button(label=team, style=discord.ButtonStyle.primary, custom_id=f"{category}_{team}")
             button.callback = self.button_callback

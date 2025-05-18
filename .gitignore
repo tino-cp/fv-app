@@ -50,3 +50,15 @@ attendance_F3_message.json
 trainee_suggestions.csv
 Formula V SuperLicense.xlsx
 poll_results/
+attendance_FVEC_HyperCar_message.json
+attendance_fvec_hypercar.json
+attendance_FVEC_LMGT3_message.json
+attendance_fvec_lmgt3.json
+.gitignore
+attendance_FVEC_message.json
+attendance_fvec.json
+.gitignore
+attendance_HYPERCAR_message.json
+attendance_hypercar.json
+attendance_LMGT3_message.json
+attendance_lmgt3.json
