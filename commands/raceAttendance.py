@@ -80,6 +80,7 @@ TEAMS_HYPERCAR = {
     "Porsche Penske": "<:porsche:1373353763473199208>",
     "Cadillac Hertz Team Jota": "<:cadillac:1373353449705570364>",
     "Aston Martin": "<:ast:1274844727757246586>",
+    "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
 TEAMS_LMGT3 = {
@@ -90,6 +91,7 @@ TEAMS_LMGT3 = {
     "Manthey Porsche": "<:manthey:1373353439739773030>",
     "Mercedes Iron Lynx": "<:merc:844262871071195147>",
     "Ford Proton Competition": "<:ford:1373353437403676762>",
+    "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
 class RaceAttendance(commands.Cog):
