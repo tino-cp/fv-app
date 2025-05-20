@@ -226,8 +226,8 @@ async def pen_command(ctx, *, action: str):
     cog = ctx.bot.get_cog('PenaltyCog')
     league = cog.current_league if cog else "?"
 
-    no_reason_actions = ["NFA", "NFI", "LI", "RI", "NFH"]
-    name_reason_actions = ["TLW", "LW", "REP", "SSIR", "DSQ", "BOTG"]
+    no_reason_actions = ["NFA", "NFI", "LI", "RI", "NFH", "SSIR"]
+    name_reason_actions = ["TLW", "LW", "REP", "DSQ", "BOTG"]
     if action.lower().startswith("pov "):
         parts = action.split(maxsplit=1)
         if len(parts) < 2:

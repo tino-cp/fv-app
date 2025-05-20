@@ -97,9 +97,9 @@ TEAMS_LMGT3 = {
 category_colors = {
     "HYPERCAR": 0xdf2115,  
     "LMGT3": 0x01814f,     
-    "F1": discord.Color.red(),  
-    "F2": discord.Color.dark_blue(),  
-    "F3": discord.Color.green()  
+    "F1": 0xff0202,  
+    "F2": 0x0000ff,  
+    "F3": 0x8c8c8c  
 }
 
 class RaceAttendance(commands.Cog):
