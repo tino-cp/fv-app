@@ -94,6 +94,14 @@ TEAMS_LMGT3 = {
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
+category_colors = {
+    "HYPERCAR": 0xdf2115,  
+    "LMGT3": 0x01814f,     
+    "F1": discord.Color.red(),  
+    "F2": discord.Color.dark_blue(),  
+    "F3": discord.Color.green()  
+}
+
 class RaceAttendance(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -287,10 +295,12 @@ class RaceAttendance(commands.Cog):
             teams = {}
 
         attendance_data = self.load_attendance(category)
+        color = category_colors.get(category, discord.Color.default())
+
         embed = discord.Embed(
             title=f"Race Attendance {category}",
             description='Click the button to confirm your participation.',
-            color=discord.Color.green() if category in ["F1", "HYPERCAR"] else discord.Color.blue()
+            color=color
         )
         for team, emoji in teams.items():
                 driver_list = self.get_driver_list(attendance_data.get(team, {}), guild)
