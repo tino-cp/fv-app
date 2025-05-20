@@ -299,7 +299,7 @@ class RaceAttendance(commands.Cog):
 
     def get_driver_list(self, drivers, guild):
         if not drivers:
-            return "No drivers yet"
+            return "-"
         return " | ".join(drivers.values())
 
     async def button_callback(self, interaction: discord.Interaction):
