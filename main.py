@@ -49,7 +49,7 @@ from commands.raceAttendance import RaceAttendance
 from commands.regs import regs
 from commands.downforce import downforce
 from commands.protest import protest_command, protests_command, revert_protest_command
-from commands.nuke import nuke_command, delta
+from commands.nuke import delta
 from commands.standings import standings_command
 from commands.results import results_command
 from commands.fastestLap import fastest_lap
@@ -75,7 +75,7 @@ bot.add_command(downforce)
 bot.add_command(protest_command)
 bot.add_command(protests_command)
 bot.add_command(revert_protest_command)
-bot.add_command(nuke_command)
+bot.add_command(delta)
 bot.add_command(standings_command)
 bot.add_command(results_command)
 bot.add_command(fastest_lap)
