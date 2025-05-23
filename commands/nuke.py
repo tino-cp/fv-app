@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+"""
+
 @commands.command(name="nuke", help="Send a funny nuke GIF.")
 async def nuke_command(ctx):
     with open("gif/idk-angry-emoji.gif", "rb") as gif_file:
@@ -12,6 +14,7 @@ async def nuke_command(ctx):
         )
         embed.set_image(url=f"attachment://{file.filename}")
         await ctx.send(embed=embed, file=file)
+"""
 
 @commands.command()
 async def delta(ctx):
