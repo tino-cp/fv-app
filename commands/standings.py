@@ -37,7 +37,15 @@ async def standings_command(ctx, category: str = None):
         },
         "S80": {
             "driver": (46, 77, 96, 98),   # CS48:CT77
-            "constructor": (29, 40, 96, 98)  # CS30:CT38
+            "constructor": (28, 40, 96, 98)  # CS30:CT38
+        },
+        "MOTOVGP": {
+            "driver": (46, 77, 119, 121),      # DP48:DQ64
+            "constructor": (28, 40, 119, 121)  # DP30:DQ38
+        },
+        "DUNE": {
+            "driver": (46, 77, 130, 132),      # EA48:EB73
+            "constructor": (28, 40, 130, 132)  # EA30:EB36
         }
     }
 
