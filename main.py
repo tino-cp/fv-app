@@ -60,6 +60,7 @@ from commands.lapCount import LapCount
 from commands.penaltyPoints import penalty_points
 from commands.penaltyPoints import lag_warnings
 from commands.penaltyPoints import reprimands
+from commands.penaltyPoints import driver_stats
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -81,6 +82,7 @@ bot.add_command(fastest_lap)
 bot.add_command(penalty_points)
 bot.add_command(reprimands)
 bot.add_command(lag_warnings)
+bot.add_command(driver_stats)
 
 @bot.event
 async def on_ready():
