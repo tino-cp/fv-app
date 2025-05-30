@@ -67,7 +67,7 @@ async def driver_stats(ctx):
                     value=f"PP: {stats['PP']}, LW: {stats['LW']}, REP: {stats['REP']}",
                     inline=False
                 )
-            await ctx.send(embed=embed)
+            #await ctx.send(embed=embed)
 
         # Send ban warning(s)
         for driver, stats in totals.items():

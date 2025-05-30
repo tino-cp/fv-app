@@ -96,12 +96,27 @@ TEAMS_LMGT3 = {
     "Reserve drivers": "<:reserve:1335001794719518830>"
 }
 
+TEAMS_MOTOVGP = {
+    "Aprilia MotoVGP Racing": "",
+    "Monster Energy Yamaha MotoVGP Racing": "",
+    "TrackHouse MotoVGP Racing": "",
+    "Harley-Davidson MotoVGP Racing": "",
+    "Teams: Honda HRC Castrol": "",
+    "Teams: Ducati Lenovo MotoVGP Racing Team": "",
+    "BMW MotoVGP Racing": "",
+    "RedBull KTM Factory": "",
+    "VR46 MotoVGP Racing": "",
+    "Prima Pramac Yamaha": "",
+    "Teams: Gresini Racing MotoVGP": "",
+}
+
 category_colors = {
     "HYPERCAR": 0xdf2115,  
     "LMGT3": 0x01814f,     
     "F1": 0xff0202,  
     "F2": 0x0000ff,  
-    "F3": 0x8c8c8c  
+    "F3": 0x8c8c8c,
+    "MOTOVGP": 0xcacaca,
 }
 
 class RaceAttendance(commands.Cog):
@@ -113,7 +128,8 @@ class RaceAttendance(commands.Cog):
     "F2": "attendance_f2.json",
     "F3": "attendance_f3.json",
     "HYPERCAR": "attendance_hypercar.json",
-    "LMGT3": "attendance_lmgt3.json"
+    "LMGT3": "attendance_lmgt3.json",
+    "MOTOVGP": "attendance_motovgp.json"
 }
 
 
@@ -236,6 +252,24 @@ class RaceAttendance(commands.Cog):
         self.save_attendance("LMGT3", {})
         await self.send_attendance_message(ctx, "LMGT3")
 
+    @commands.command(name="RAMOTOVGP")
+    async def race_attendance_fvec(self, ctx):
+        allowed_roles = ["Admin", "Steward"]
+        user_roles = [role.name for role in ctx.author.roles]
+
+        if not any(role in user_roles for role in allowed_roles):
+            await ctx.send("🚫 You do not have permission to use this command.")
+            return
+
+        if ctx.guild.id not in ALLOWED_SERVER_IDS:
+            await ctx.send("❌ This command is only allowed on the Formula V or test servers.")
+            return
+        
+        await ctx.send(f"# MotoVGP Attendance ")
+
+        self.save_attendance("MOTOVGP", {})
+        await self.send_attendance_message(ctx, "MOTOVGP")
+
     @commands.command(name="reset")
     async def reset_attendance(self, ctx, category: str):
 
@@ -293,6 +327,8 @@ class RaceAttendance(commands.Cog):
             teams = TEAMS_HYPERCAR
         elif category == "LMGT3":
             teams = TEAMS_LMGT3
+        elif category == "MOTOVGP":
+            teams = TEAMS_MOTOVGP
         else:
             teams = {}
 
@@ -348,7 +384,7 @@ class RaceAttendance(commands.Cog):
     @tasks.loop(minutes=2)
     async def refresh_views(self):
         await self.bot.wait_until_ready()
-        for category in ["F1", "F2", "F3", "HYPERCAR", "LMGT3"]:
+        for category in ["F1", "F2", "F3", "HYPERCAR", "LMGT3", "MOTOVGP"]:
             try:
                 with open(f"attendance_{category}_message.json", "r") as f:
                     data = json.load(f)
@@ -375,6 +411,8 @@ class RaceAttendance(commands.Cog):
             teams = TEAMS_HYPERCAR
         elif category == "LMGT3":
             teams = TEAMS_LMGT3
+        elif category == "MOTOVGP":
+            teams = TEAMS_MOTOVGP
         else:
             teams = {}
         for team in teams:
