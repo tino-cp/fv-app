@@ -21,15 +21,15 @@ async def standings_command(ctx, category: str = None):
     STANDINGS_RANGES = {
         "F1": {
             "driver": (46, 77, 20, 22),   # U47:V77
-            "constructor": (29, 40, 20, 22)  # U30:V39
+            "constructor": (28, 40, 20, 22)  # U30:V39
         },
         "F2": {
             "driver": (46, 77, 35, 37),   # AJ47:AK77
-            "constructor": (29, 40, 35, 37)  # AJ30:AK40
+            "constructor": (28, 40, 35, 37)  # AJ30:AK40
         },
         "F3": {
             "driver": (46, 77, 48, 50),   # AJ47:AK77
-            "constructor": (29, 40, 48, 50)  # AJ30:AK40
+            "constructor": (28, 40, 48, 50)  # AJ30:AK40
         },
         "INDY": {
             "driver": (46, 77, 107, 109),  # DD48:DE76
