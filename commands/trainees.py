@@ -23,7 +23,7 @@ class TraineeCog(commands.Cog):
                 writer = csv.writer(f)
                 writer.writerow(["Trainee", "Suggestion", "Thread Link", "Status", "Timestamp"])
 
-    @commands.command(name='suggestion')
+    @commands.command(name='suggestion',aliases=['s', 'sug'])
     async def suggestion(self, ctx, *, message: str):
         if ctx.guild.id not in ALLOWED_SERVER_IDS:
             await ctx.send("❌ This command is only allowed on the Formula V or test servers.")

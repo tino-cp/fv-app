@@ -86,7 +86,7 @@ async def driver_stats(ctx):
     except Exception as e:
         await ctx.send(f"❌ Error: {str(e)}")
 
-@commands.command(name="pp", help="Get penalty points. Usage: !pp or !pp F1/F2/F3")
+@commands.command(name="pp",aliases=['Pp','pP', 'PP'], help="Get penalty points. Usage: !pp or !pp F1/F2/F3")
 async def penalty_points(ctx, league: str = None):
     try:
         # Define league-specific slicing info (start row is 86 for U87 etc.)
@@ -165,7 +165,7 @@ async def penalty_points(ctx, league: str = None):
             color=discord.Color.red()
         ))
 
-@commands.command(name="lw", aliases=["lagwarning"], help="Get lag warnings. Usage: !lw or !lw F1/F2/F3")
+@commands.command(name="lw", aliases=["lagwarning", "Lw","lW","LW"], help="Get lag warnings. Usage: !lw or !lw F1/F2/F3")
 async def lag_warnings(ctx, league: str = None):
     try:
         leagues = {
@@ -241,7 +241,7 @@ async def lag_warnings(ctx, league: str = None):
             color=discord.Color.red()
         ))
 
-@commands.command(name="rep", aliases=["reps", "reprimand", "reprimands"], help="Get reprimands. Usage: !rep or !rep F1/F2/F3")
+@commands.command(name="rep", aliases=["reps", "reprimand", "reprimands", "REP", "Rep"], help="Get reprimands. Usage: !rep or !rep F1/F2/F3")
 async def reprimands(ctx, league: str = None):
     try:
         leagues = {

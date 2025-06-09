@@ -61,6 +61,7 @@ from commands.penaltyPoints import penalty_points
 from commands.penaltyPoints import lag_warnings
 from commands.penaltyPoints import reprimands
 from commands.penaltyPoints import driver_stats
+from commands.memberLogger import MemberLogger
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -94,6 +95,8 @@ async def on_ready():
     await bot.add_cog(TraineeCog(bot))
     await bot.add_cog(Poll(bot))
     await bot.add_cog(LapCount(bot))
+    MemberLogger(bot)
+
     # await download_excel_file()
     download_excel_file_loop.start()
 
