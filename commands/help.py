@@ -95,7 +95,7 @@ async def show_help(ctx):
             "`!lw [league]` - Lag warnings\n"
             "`!rep [league]` - Reprimands\n"
             "`!pens` - Summary of all penalties across leagues",
-            "Penalty records"
+            "Pen recs"
         ),
         (
             "Trainee Stewards",
@@ -103,7 +103,7 @@ async def show_help(ctx):
             "`!approve` - Approve suggestion\n"
             "`!deny` - Deny suggestion\n"
             "`!listSuggestions` - Export all suggestions",
-            "Trainee stewards"
+            "Trainees"
         ),
         (
             "Protests",
@@ -118,7 +118,7 @@ async def show_help(ctx):
             "`!cancel` - Cancel timer\n"
             "`!pen sug`, `!pen pov <name>` - Rename thread\n"
             "`!pen <type> <name> <reason>` - Apply verdict",
-            "Concluding penalties"
+            "Concluding"
         ),
         (
             "Logs",
