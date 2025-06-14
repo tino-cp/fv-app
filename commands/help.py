@@ -71,7 +71,9 @@ async def show_help(ctx):
             "`!df` - Downforce settings\n"
             "`!lapchecks` - Roll lap-check chances\n"
             "`!fastestLap (track)` - Fastest lap on selected track\n"
-            "`!lapCount (time)` / `!lc (time)` - Lap count for a set time",
+            "`!lapCount (time)` / `!lc (time)` - Lap count for a set time\n"
+            "`!getStarted` - How to get started after being approved\n"
+            "`!signup` - How to get started before being approved\n",
             "General"
         ),
         (

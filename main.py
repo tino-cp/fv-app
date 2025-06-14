@@ -47,7 +47,7 @@ from commands.penalty import start_timer, cancel_timer, pen_command, pen_summary
 from commands.help import show_help
 from commands.raceAttendance import RaceAttendance
 from commands.regs import regs
-from commands.downforce import downforce
+from commands.respondToAMessege import downforce, spreadsheet, getStarted, signup
 from commands.protest import protest_command, protests_command, revert_protest_command
 from commands.nuke import delta
 from commands.standings import standings_command
@@ -83,6 +83,9 @@ bot.add_command(penalty_points)
 bot.add_command(reprimands)
 bot.add_command(lag_warnings)
 bot.add_command(driver_stats)
+bot.add_command(spreadsheet)
+bot.add_command(getStarted)
+bot.add_command(signup)
 
 @bot.event
 async def on_ready():
