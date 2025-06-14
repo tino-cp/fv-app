@@ -61,6 +61,7 @@ from commands.penaltyPoints import penalty_points
 from commands.penaltyPoints import lag_warnings
 from commands.penaltyPoints import reprimands
 from commands.penaltyPoints import driver_stats
+from commands.freeNumbers import free_numbers
 
 bot.add_command(delta)
 bot.add_command(weather)
@@ -86,6 +87,7 @@ bot.add_command(driver_stats)
 bot.add_command(spreadsheet)
 bot.add_command(getStarted)
 bot.add_command(signup)
+bot.add_command(free_numbers)
 
 @bot.event
 async def on_ready():
